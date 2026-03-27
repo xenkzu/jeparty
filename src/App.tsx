@@ -10,7 +10,6 @@ type Screen = 'SETUP' | 'GAME' | 'QUESTION' | 'END';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('SETUP');
-  const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
   const [gameState, setGameState] = useState<Game | null>(null);
   // Log game state to console when initialized to resolve unused warning while in development
   if (gameState) console.debug("GAME_STREAM_INITIALIZED:", gameState.players.length, "players active");
@@ -19,7 +18,6 @@ function App() {
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
   const navigateTo = (screen: Screen) => {
-    setPrevScreen(currentScreen);
     setCurrentScreen(screen);
   };
 
@@ -105,11 +103,58 @@ function App() {
           />
         );
       case 'QUESTION':
+        if (!gameState || !gameState.currentQuestion) return <Setup onStart={handleStart} />;
+        
+        const { categoryIndex, questionIndex } = gameState.currentQuestion;
+        const currentQuestion = gameState.board[categoryIndex].questions[questionIndex];
+        const activePlayer = gameState.players[gameState.turnIndex];
+        
+        // Wire lowestScoringPlayer calculation
+        const lowestScoringPlayer = gameState.players.reduce((min, p) => p.score < min.score ? p : min, gameState.players[0]);
+
+        const updateScoreAndStatus = (scoreDelta: number) => {
+          const newPlayers = [...gameState.players];
+          newPlayers[gameState.turnIndex].score += scoreDelta;
+
+          const newBoard = [...gameState.board];
+          newBoard[categoryIndex].questions[questionIndex].status = 'answered';
+
+          setGameState({
+            ...gameState,
+            players: newPlayers,
+            board: newBoard,
+            currentQuestion: null
+          });
+          navigateTo('GAME');
+        };
+
         return (
           <QuestionModal
-            onClose={() => navigateTo(prevScreen || 'GAME')}
-            onAnswerCorrect={() => navigateTo('GAME')}
-            onAnswerIncorrect={() => navigateTo('GAME')}
+            question={{
+              value: currentQuestion.value,
+              question: currentQuestion.question,
+              answer: currentQuestion.answer,
+              status: currentQuestion.status
+            }}
+            activePlayer={activePlayer}
+            lowestScoringPlayer={lowestScoringPlayer}
+            scoringMode={gameState.scoringMode}
+            onCorrect={() => {
+              const multiplier = activePlayer.score === lowestScoringPlayer.score ? 1.5 : 1;
+              updateScoreAndStatus(currentQuestion.value * multiplier);
+            }}
+            onWrong={() => {
+              const penalty = gameState.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
+              updateScoreAndStatus(-penalty);
+            }}
+            onPass={() => {
+              const penalty = gameState.scoringMode === 'normal' ? currentQuestion.value * 0.5 : currentQuestion.value * 0.375;
+              updateScoreAndStatus(-penalty);
+            }}
+            onClose={() => {
+              setGameState({ ...gameState, currentQuestion: null });
+              navigateTo('GAME');
+            }}
           />
         );
       case 'END':

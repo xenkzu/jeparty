@@ -1,13 +1,14 @@
 import { Board } from '../types/game';
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const MODEL = 'llama-3.3-70b-versatile';
 
 /**
- * Generates a complete Jeopardy game board using Google Gemini 2.0 Flash.
+ * Generates a complete Jeopardy game board using Groq (OpenAI-compatible).
  *
  * @param categories - Array of 5 category names to generate questions for.
- * @returns A promise that resolves to a Board object (typed Categories with Questions).
+ * @returns A promise that resolves to a Board object.
  */
 export const generateBoard = async (categories: string[]): Promise<Board> => {
   const prompt = `Generate a complete Jeopardy game board for these 5 categories: ${categories.join(', ')}.
@@ -18,34 +19,36 @@ export const generateBoard = async (categories: string[]): Promise<Board> => {
 
   try {
     if (!API_KEY) {
-      throw new Error('VITE_GEMINI_API_KEY is not defined in the environment.');
+      throw new Error('VITE_GROQ_API_KEY is not defined in the environment.');
     }
 
-    const response = await fetch(`${BASE_URL}?key=${API_KEY}`, {
+    const response = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
+        model: MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 2000
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Gemini API Error: ${errorData.error?.message || response.statusText}`);
+      throw new Error(`Groq API Error: ${errorData.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
-    let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    let text = data.choices[0]?.message?.content;
 
     if (!text) {
-      throw new Error('No content returned from Gemini.');
+      throw new Error('No content returned from Groq.');
     }
 
-    // Strip any markdown code fences if Gemini ignores instructions
+    // Strip any markdown code fences if AI ignores instructions
     text = text.replace(/```json\n?|```/g, '').trim();
 
     const board: Board = JSON.parse(text);
