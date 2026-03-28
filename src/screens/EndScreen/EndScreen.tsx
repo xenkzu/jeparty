@@ -33,7 +33,7 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
           style={STYLES.winnerShard}
           className="bg-[var(--color-primary-dim)] text-[var(--color-on-primary-fixed)] px-12 py-8 flex flex-col items-center transform -rotate-2 relative z-10"
         >
-          <h1 className="font-display font-black text-7xl md:text-9xl italic leading-none tracking-tighter uppercase transform scale-y-125">
+          <h1 className="font-display font-black text-7xl md:text-9xl italic leading-none tracking-tighter uppercase transform scale-y-125 animate-glitch" style={{ animationIterationCount: 'infinite', animationDuration: '2s' }}>
             {winner.name}
           </h1>
           <div className="mt-4 font-display font-bold text-3xl tracking-tighter">
@@ -55,8 +55,8 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
         {sortedPlayers.map((player, idx) => (
           <div 
             key={player.name}
-            style={STYLES.rankCard}
-            className={`flex items-center justify-between p-6 transition-all border-l-4 ${
+            style={{ ...((STYLES.rankCard) as React.CSSProperties), animationDelay: `${idx * 150}ms` }}
+            className={`flex items-center justify-between p-6 transition-all border-l-4 animate-power-on ${
               idx === 0 
                 ? 'bg-[var(--color-surface-container-highest)] border-[var(--color-primary-dim)]' 
                 : 'bg-[var(--color-surface-container-low)] border-transparent'
@@ -82,7 +82,7 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
         <button 
           onClick={onRestart}
           style={STYLES.restartBtn}
-          className="bg-white text-black font-display font-black text-3xl px-16 py-8 hover:bg-[var(--color-primary-dim)] hover:text-white transition-all transform hover:scale-105 active:scale-95 uppercase italic tracking-tighter"
+          className="bg-white text-black font-display font-black text-3xl px-16 py-8 hover:bg-[var(--color-primary-dim)] hover:text-white transition-all transform hover:scale-105 active:scale-95 uppercase italic tracking-tighter hover:animate-scanline"
         >
           INITIALIZE_NEW_SEQUENCE
         </button>

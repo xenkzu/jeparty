@@ -39,9 +39,9 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#080808] text-white">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#080808] text-white overflow-y-auto animate-power-on">
       {/* 1. Global Navigation Bar */}
-      <nav className="h-16 flex items-center justify-between px-8 border-b border-white/5 bg-black/40">
+      <nav className="h-16 shrink-0 flex items-center justify-between px-8 border-b border-white/5 bg-black/40">
         <div className="flex items-center gap-12">
           <span className="font-display font-black text-2xl text-[var(--color-primary-dim)] italic tracking-tighter">JEPARTY</span>
           <div className="hidden md:flex gap-10">
@@ -61,7 +61,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
       </nav>
 
       {/* 2. Content Header (Category & Value) */}
-      <header className="px-12 py-10 flex justify-between items-end">
+      <header className="px-12 py-10 shrink-0 flex justify-between items-end">
         <div className="bg-[var(--color-primary-dim)] text-black px-6 py-2">
           <span className="font-display font-black text-sm tracking-tighter uppercase italic">CATEGORY: {question.status === 'answered' ? 'LOCKED_SECTOR' : 'UNKNOWN_INTEL'}</span>
         </div>
@@ -71,9 +71,9 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
       </header>
 
       {/* 3. Main Stage (Question Display) */}
-      <main className="flex-1 flex flex-col justify-center px-12 md:px-24 max-w-7xl">
+      <main className="flex-1 flex flex-col justify-center px-12 md:px-24 max-w-7xl py-12">
         <div className="space-y-4">
-          <h2 className="font-display font-black text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tighter uppercase italic">
+          <h2 className="font-display font-black text-4xl md:text-5xl lg:text-6xl leading-[1] tracking-tighter uppercase italic animate-flicker" style={{ animationIterationCount: 2 }}>
             {/* Logic: Highlight words in the question (simple heuristic: first word if it looks like a subject, or just display raw) */}
             {question.question.split(' ').map((word, i) => (
               <span key={i} className={i === 1 ? 'text-[var(--color-primary-dim)]' : 'text-white'}>
@@ -95,15 +95,15 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
             </button>
           ) : (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-left-4 duration-300">
-              <div className="bg-white/5 border-l-4 border-[var(--color-primary-dim)] p-8">
+              <div className="bg-white/5 border-l-4 border-[var(--color-primary-dim)] p-8 animate-glitch">
                 <p className="font-display font-black text-4xl text-[var(--color-primary-dim)] italic tracking-tighter uppercase">
                   {question.answer}
                 </p>
               </div>
               <div className="flex items-center gap-10">
-                <button onClick={onWrong} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-[var(--color-error)] uppercase underline underline-offset-8 decoration-2 hover:decoration-[var(--color-error)]">WRONG ({previews.wrong})</button>
-                <button onClick={onCorrect} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-green-500 uppercase underline underline-offset-8 decoration-2 hover:decoration-green-500">CORRECT (+{previews.correct})</button>
-                <button onClick={onPass} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-white uppercase underline underline-offset-8 decoration-2 hover:decoration-white">PASS ({previews.pass})</button>
+                <button onClick={onWrong} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-[var(--color-error)] uppercase underline underline-offset-8 decoration-2 hover:decoration-[var(--color-error)]">WRONG (<span className="animate-blink-cursor">{previews.wrong}</span>)</button>
+                <button onClick={onCorrect} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-green-500 uppercase underline underline-offset-8 decoration-2 hover:decoration-green-500">CORRECT (+<span className="animate-blink-cursor">{previews.correct}</span>)</button>
+                <button onClick={onPass} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-white uppercase underline underline-offset-8 decoration-2 hover:decoration-white">PASS (<span className="animate-blink-cursor">{previews.pass}</span>)</button>
               </div>
             </div>
           )}

@@ -20,7 +20,7 @@ const PlayerInput = ({
     <label className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-surface-bright pl-1">
       Player_{String(index + 1).padStart(2, '0')}
     </label>
-    <div className="flex h-14 bg-[#1A1A1A] [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)] items-center">
+    <div className="flex h-14 bg-[#1A1A1A] [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)] items-center focus-within:animate-flicker transition-all">
       <div className="w-1.5 bg-tertiary-container h-full mr-4 shrink-0"></div>
       <input
         className="w-full bg-transparent outline-none font-display font-bold text-lg uppercase placeholder:text-[#333333] text-on-surface"
@@ -43,7 +43,10 @@ const PlayerInput = ({
 );
 
 const CategoryInput = ({ index, value, onChange }: { index: number; value: string; onChange: (v: string) => void }) => (
-  <div className="flex items-center gap-4 mb-6 text-on-surface font-display font-bold text-xl md:text-2xl uppercase">
+  <div 
+    className="flex items-center gap-4 mb-6 text-on-surface font-display font-bold text-xl md:text-2xl uppercase animate-power-on"
+    style={{ animationDelay: `${index * 100}ms` }}
+  >
     <span className="text-[#333333]">{String(index + 1).padStart(2, '0')}</span>
     <input
       className="bg-transparent outline-none w-full placeholder:text-[#333333] text-on-surface"
@@ -92,7 +95,7 @@ const Setup: React.FC<SetupProps> = ({ onStart }) => {
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-12 pb-24">
       {/* Header Section */}
       <header className="flex flex-col gap-4">
-        <Title as="h1" className="text-tertiary-container leading-[0.85] text-[4rem] md:text-[7rem] tracking-tighter">
+        <Title as="h1" className="text-tertiary-container leading-[0.85] text-[4rem] md:text-[7rem] tracking-tighter animate-glitch">
           INITIALIZE<br />CARNAGE
         </Title>
         <div className="bg-[#1A1A1A] w-fit px-4 py-2 text-[0.65rem] font-bold tracking-[0.2em] text-[#666666] uppercase">
@@ -212,7 +215,7 @@ const Setup: React.FC<SetupProps> = ({ onStart }) => {
               categories.map(c => c.trim()),
               advancedMode ? 'advanced' : 'normal'
             )}
-            className={`mt-4 relative group transition-all duration-300 ${!isFormValid ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:-translate-y-1 hover:translate-x-1'}`}
+            className={`mt-4 relative group transition-all duration-300 ${!isFormValid ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:-translate-y-1 hover:translate-x-1 hover:animate-scanline'}`}
           >
             {/* White Shadow Background Component */}
             <div className="absolute inset-0 bg-white [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)] translate-y-2 -translate-x-2 group-hover:translate-y-4 group-hover:-translate-x-4 transition-transform duration-300"></div>

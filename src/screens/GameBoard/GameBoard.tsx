@@ -33,7 +33,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
               style={idx === 0 ? STYLES.shardedRight : {}}
               className={`p-5 flex flex-col justify-between relative transition-all duration-300 ${
                 isActive 
-                  ? 'bg-[var(--color-primary-dim)] text-[var(--color-on-primary-fixed)] scale-102 z-10' 
+                  ? 'bg-[var(--color-primary-dim)] text-[var(--color-on-primary-fixed)] scale-102 z-10 animate-scanline' 
                   : 'bg-[var(--color-surface-container-high)] border-l-4 border-[var(--color-primary-dim)]'
               }`}
             >
@@ -67,8 +67,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
         {categories.map((cat, i) => (
           <div 
             key={cat} 
-            style={i % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt}
-            className="row-span-1 bg-[var(--color-surface-container-highest)] p-2 flex items-center justify-center border-b-2 border-[var(--color-primary-dim)]"
+            style={{ ...((i % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt) as React.CSSProperties), animationDelay: `${i * 50}ms` }}
+            className="row-span-1 bg-[var(--color-surface-container-highest)] p-2 flex items-center justify-center border-b-2 border-[var(--color-primary-dim)] animate-power-on"
           >
             <h3 className="font-display font-bold text-[10px] md:text-xs text-white uppercase text-center leading-none tracking-tighter italic">
               {cat}
@@ -88,8 +88,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
                 return (
                   <div 
                     key={`${colIdx}-${rowIdx}`} 
-                    style={totalIdx % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt}
-                    className="h-full bg-[var(--color-surface-container-lowest)] flex flex-col items-center justify-center relative opacity-30 grayscale pointer-events-none"
+                    style={{ ...((totalIdx % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt) as React.CSSProperties), animationDelay: `${totalIdx * 30}ms` }}
+                    className="h-full bg-[var(--color-surface-container-lowest)] flex flex-col items-center justify-center relative opacity-30 grayscale pointer-events-none animate-power-on animate-flicker"
                   >
                     <span className="font-display font-bold text-2xl md:text-4xl text-[var(--color-outline)] tracking-tighter line-through italic">{question.value}</span>
                     <span className="absolute rotate-12 text-[7px] font-bold font-display text-red-600 bg-black px-1 uppercase">USED</span>
@@ -101,8 +101,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
                 <div 
                   key={`${colIdx}-${rowIdx}`} 
                   onClick={() => question.status === 'hidden' && onSelectQuestion(colIdx, rowIdx)}
-                  style={totalIdx % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt}
-                  className="h-full bg-[var(--color-surface-container-low)] hover:bg-[var(--color-primary-dim)] group cursor-pointer flex flex-col items-center justify-center relative overflow-hidden transition-all duration-75 active:scale-95"
+                  style={{ ...((totalIdx % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt) as React.CSSProperties), animationDelay: `${totalIdx * 30}ms` }}
+                  className="h-full bg-[var(--color-surface-container-low)] hover:bg-[var(--color-primary-dim)] group cursor-pointer flex flex-col items-center justify-center relative overflow-hidden transition-all duration-75 active:scale-95 animate-power-on hover:animate-glitch"
                 >
                   <span className="font-display font-bold text-2xl md:text-4xl text-[var(--color-primary-dim)] group-hover:text-black tracking-tighter transition-colors italic">
                     {question.value}

@@ -98,7 +98,7 @@ function App() {
       return (
         <div className="flex-1 flex flex-col items-center justify-center gap-8 animate-pulse bg-surface-container-lowest">
           <div className="w-16 h-1 bg-tertiary-container shadow-[0_0_15px_rgba(254,0,0,0.5)]"></div>
-          <h2 className="font-display text-4xl md:text-6xl text-tertiary-container uppercase tracking-tighter text-center">
+          <h2 className="font-display text-4xl md:text-6xl text-tertiary-container uppercase tracking-tighter text-center animate-blink-cursor">
             GENERATING BOARD...
           </h2>
           <div className="w-16 h-1 bg-tertiary-container shadow-[0_0_15px_rgba(254,0,0,0.5)]"></div>
