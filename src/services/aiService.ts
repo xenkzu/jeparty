@@ -11,11 +11,26 @@ const MODEL = 'llama-3.3-70b-versatile';
  * @returns A promise that resolves to a Board object.
  */
 export const generateBoard = async (categories: string[]): Promise<Board> => {
-  const prompt = `Generate a complete Jeopardy game board for these 5 categories: ${categories.join(', ')}.
+  const visualCategories = categories.filter(c => c.toLowerCase().endsWith(' -v'));
+  const promptCategories = categories.map(c => c.replace(/ -v$/i, ''));
+  
+  const prompt = `Generate a complete Jeopardy game board for these 5 categories: ${promptCategories.join(', ')}.
       Return ONLY valid JSON, no markdown, no backticks, no explanation.
-      A JSON array of exactly 5 objects, each shaped as:
-      { category: string, questions: [{ value: 100|200|300|400|500, question: string, answer: string, status: 'hidden' }] }
-      Make questions fun for a casual party. Each category must have exactly 5 questions.`;
+      A JSON array of exactly 5 objects: { category: string, questions: [] }
+      Each question object: { value: number, question: string, answer: string, status: 'hidden', searchTerm?: string }
+      
+      SPECIAL INSTRUCTION:
+      For categories matching these exactly: [${visualCategories.map(c => c.replace(/ -v$/i, '')).join(', ')}], the searchTerm field must follow these strict rules:
+       - Must be the exact proper noun Wikipedia would have a page for
+       - Format: 'Firstname Lastname' for people, 'Character Name anime/show' for fictional characters
+       - GOOD examples: 'Monkey D Luffy', 'Sasuke Uchiha', 'Albert Einstein', 'Eiffel Tower'
+       - BAD examples: 'anime character', 'famous scientist', 'guess who', 'popular character'
+       - If you cannot think of a specific Wikipedia-searchable entity, pick a different question
+       - The answer field must match the searchTerm subject exactly
+       - The question text should be "Guess the character" or "Who is this?".
+      
+      For all other categories, DO NOT include a searchTerm field.
+      Make questions fun/casual. Each category must have exactly 5 questions (100, 200, 300, 400, 500).`;
 
   try {
     if (!API_KEY) {

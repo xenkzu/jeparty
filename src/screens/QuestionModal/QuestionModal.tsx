@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface QuestionModalProps {
-  question: { value: number; question: string; answer: string; status: string };
+  question: { value: number; question: string; answer: string; status: string; searchTerm?: string };
   activePlayer: { name: string; score: number };
   lowestScoringPlayer: { name: string; score: number };
   scoringMode: 'normal' | 'advanced';
@@ -22,6 +22,23 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   onClose 
 }) => {
   const [revealed, setRevealed] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+
+  useEffect(() => {
+    if (question.searchTerm) {
+      setImageLoading(true);
+      fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(question.searchTerm)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.thumbnail?.source) {
+            setImageUrl(data.thumbnail.source);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setImageLoading(false));
+    }
+  }, [question.searchTerm]);
 
   const isLowest = activePlayer.score === lowestScoringPlayer.score;
   const multiplier = isLowest ? 1.5 : 1;
@@ -82,6 +99,26 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
             ))}
           </h2>
         </div>
+
+        {/* Visual Content (if present) */}
+        {question.searchTerm && (
+          <div className="mt-8 mb-4 max-w-xl">
+            {imageLoading ? (
+              <div className="w-full aspect-video bg-white/5 animate-pulse flex items-center justify-center border border-white/10">
+                <span className="text-[10px] font-bold tracking-widest text-[#666666]">FETCHING_INTEL...</span>
+              </div>
+            ) : imageUrl ? (
+              <div className="relative group overflow-hidden border-2 border-white/5">
+                <img 
+                  src={imageUrl} 
+                  alt="Intel" 
+                  className="w-full h-auto max-h-[40vh] object-contain bg-black/40" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </div>
+            ) : null}
+          </div>
+        )}
 
         {/* Action Layer */}
         <div className="mt-20 flex items-center gap-12">

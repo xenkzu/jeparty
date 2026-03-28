@@ -175,7 +175,8 @@ function App() {
               value: currentQuestion.value,
               question: currentQuestion.question,
               answer: currentQuestion.answer,
-              status: currentQuestion.status
+              status: currentQuestion.status,
+              searchTerm: currentQuestion.searchTerm
             }}
             activePlayer={activePlayer}
             lowestScoringPlayer={lowestScoringPlayer}

@@ -39,6 +39,7 @@ export interface BoardCategory {
     question: string;
     answer: string;
     status: 'hidden' | 'revealed' | 'answered';
+    searchTerm?: string;
   }[];
 }
 
