@@ -71,7 +71,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
             className="row-span-1 bg-[var(--color-surface-container-highest)] p-2 flex items-center justify-center border-b-2 border-[var(--color-primary-dim)] animate-power-on"
           >
             <h3 className="font-display font-bold text-[10px] md:text-xs text-white uppercase text-center leading-none tracking-tighter italic flex items-center gap-1">
-              {game.board[i].questions.some(q => q.searchTerm) && <span className="text-[10px]">📷</span>}
               {cat}
             </h3>
           </div>
