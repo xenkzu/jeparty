@@ -54,7 +54,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
        - The question text should be "Guess the character" or "Who is this?".
       
       For all other categories, DO NOT include a searchTerm field.
-      Make questions fun/casual. Each category must have exactly 5 questions (100, 200, 300, 400, 500).`;
+      Make questions fun/casual. Each category must have exactly 5 questions (100, 200, 300, 400, 500).
+
+      QUESTION QUALITY RULES — follow strictly:
+       1. Every question MUST be phrased as a question ending with a '?'
+          GOOD: 'What is the capital of France?'
+          BAD: 'The capital of France', 'Name the capital of France'
+
+       2. Every answer must be short and specific — 1 to 4 words maximum
+          GOOD: 'Paris', 'Albert Einstein', 'The Eiffel Tower'
+          BAD: 'It is Paris', 'The answer is Einstein'
+
+       3. Questions must NEVER repeat within the same category
+          Each of the 5 questions must test a completely different aspect of the category
+
+       4. Questions must NEVER be ambiguous — only one correct answer is possible
+
+      DIFFICULTY SCALING RULES — strictly follow this for every category:
+       100 points → Extremely easy, common knowledge, anyone would know this
+                    Example for 'Science': 'What planet do we live on?'
+       200 points → Easy, basic knowledge, most people would know this
+                    Example for 'Science': 'What gas do plants absorb from the air?'
+       300 points → Medium, requires some knowledge of the topic
+                    Example for 'Science': 'What is the chemical symbol for gold?'
+       400 points → Hard, requires good knowledge of the topic
+                    Example for 'Science': 'What is the speed of light in km/s?'
+       500 points → Expert level, only enthusiasts or experts would know this
+                    Example for 'Science': 'What is the half-life of Carbon-14?'
+
+       The difficulty jump between each tier must be noticeable.
+       NEVER put a hard question at 100 or an easy question at 500.
+       Generate questions in order: 100 first (easiest) → 500 last (hardest)`;
 
   try {
     const response = await fetch(BASE_URL, {
