@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/generate-board.ts": {
+      "maxDuration": 30
+    }
+  }
+}
