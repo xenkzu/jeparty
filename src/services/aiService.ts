@@ -2,7 +2,7 @@ import { Board } from '../types/game';
 
 const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL = 'qwen/qwen3-32b';
 
 /**
  * Generates a complete Jeopardy game board using Groq (OpenAI-compatible).
@@ -47,7 +47,8 @@ export const generateBoard = async (categories: string[]): Promise<Board> => {
         model: MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 2000,
+        reasoning_format: "hidden"
       })
     });
 
