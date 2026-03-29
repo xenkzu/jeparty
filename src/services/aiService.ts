@@ -30,7 +30,8 @@ export const generateBoard = async (categories: string[]): Promise<Board> => {
        - The question text should be "Guess the character" or "Who is this?".
       
       For all other categories, DO NOT include a searchTerm field.
-      Make questions fun/casual. Each category must have exactly 5 questions (100, 200, 300, 400, 500).`;
+      Make questions fun/casual. Each category must have exactly 5 questions (100, 200, 300, 400, 500).
+      Keep each question under 15 words and each answer under 5 words to save space.`;
 
   try {
     if (!API_KEY) {
@@ -47,7 +48,7 @@ export const generateBoard = async (categories: string[]): Promise<Board> => {
         model: MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: 4000,
         reasoning_format: "hidden"
       })
     });
@@ -70,8 +71,15 @@ export const generateBoard = async (categories: string[]): Promise<Board> => {
     const board: Board = JSON.parse(text);
 
     // Basic structure validation
+    // Verification check for board structure
     if (!Array.isArray(board) || board.length !== 5) {
-      throw new Error('AI returned an invalid board structure. Expected 5 categories.');
+      throw new Error('Invalid board structure from AI: Expected 5 categories');
+    }
+
+    for (const cat of board) {
+      if (!cat.category || !Array.isArray(cat.questions) || cat.questions.length !== 5) {
+        throw new Error('Invalid board structure from AI: Each category must have 5 questions');
+      }
     }
 
     return board;
