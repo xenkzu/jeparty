@@ -1,3 +1,8 @@
+export interface VisualImageResult {
+  imageUrl: string | null;
+  source: string;
+}
+
 /**
  * Fetches a visual image for a question.
  * In production: calls /api/fetch-image serverless function.
@@ -6,16 +11,19 @@
 export const fetchVisualImage = async (
   searchTerm: string, 
   category: string
-): Promise<string | null> => {
+): Promise<VisualImageResult | null> => {
   try {
     if (import.meta.env.DEV) {
       // ─── DEV MODE: Call Wikipedia directly ─────────────────────────
       const res = await fetch(
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`
       );
-      if (!res.ok) return null;
+      if (!res.ok) return { imageUrl: null, source: 'wikipedia-dev' };
       const data = await res.json();
-      return data.thumbnail?.source || null;
+      return { 
+        imageUrl: data.thumbnail?.source || null, 
+        source: 'wikipedia-dev' 
+      };
     }
 
     // ─── PROD MODE: Call Vercel serverless function ──────────────────
@@ -26,7 +34,10 @@ export const fetchVisualImage = async (
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return data.imageUrl ?? null;
+    return { 
+      imageUrl: data.imageUrl ?? null, 
+      source: data.source || 'unknown' 
+    };
   } catch {
     return null;
   }

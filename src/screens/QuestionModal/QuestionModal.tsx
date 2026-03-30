@@ -32,8 +32,11 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
     if (question.searchTerm) {
       setImageLoading(true);
       fetchVisualImage(question.searchTerm, categoryName)
-        .then(url => {
-          if (url) setImageUrl(url);
+        .then(result => {
+          if (result?.imageUrl) {
+            console.log(`[Image] Found for "${question.searchTerm}" via ${result.source}`);
+            setImageUrl(result.imageUrl);
+          }
         })
         .finally(() => setImageLoading(false));
     }
