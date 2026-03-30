@@ -29,7 +29,7 @@ function buildSmartQuery(searchTerm: string, type: CategoryType): string {
 }
 
 // ─── STEP 4: URL Filtering ─────────────────────────────────────────────────
-const BLOCKED_FRAGMENTS = ['logo', 'icon', 'banner', 'flag', 'svg', 'apple-touch', 'placeholder', 'default'];
+const BLOCKED_FRAGMENTS = ['logo', 'icon', 'banner', 'Flag_of', '.svg', 'apple-touch', 'placeholder', 'no-image', 'questionmark'];
 
 function isValidImageUrl(
   url: unknown,
@@ -168,6 +168,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!imageUrl && type === 'anime_game') {
     imageUrl = await fetchWikipediaSummary(searchTerm);
     if (imageUrl) source = 'wikipedia';
+  }
+
+  // Universal Wikipedia fallback for any type not yet resolved
+  if (!imageUrl) {
+    imageUrl = await fetchWikipediaSummary(searchTerm);
+    if (imageUrl) source = 'wikipedia-fallback';
   }
 
   // ─── STEP 5: DuckDuckGo fallback ────────────────────────────────────
