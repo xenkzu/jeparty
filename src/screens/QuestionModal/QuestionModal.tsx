@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchVisualImage } from '../../services/imageService';
 
 interface QuestionModalProps {
@@ -7,6 +7,7 @@ interface QuestionModalProps {
   activePlayer: { name: string; score: number };
   isUnderdog: boolean;
   scoringMode: 'normal' | 'advanced';
+  timeLimit: 30 | 60 | 0;
   onCorrect: () => void;
   onWrong: () => void;
   onPass: () => void;
@@ -18,7 +19,8 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   categoryName,
   activePlayer, 
   isUnderdog, 
-  scoringMode, 
+  scoringMode,
+  timeLimit,
   onCorrect, 
   onWrong, 
   onPass, 
@@ -27,7 +29,10 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   const [revealed, setRevealed] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(timeLimit);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Image fetch
   useEffect(() => {
     if (question.searchTerm) {
       setImageLoading(true);
@@ -42,6 +47,30 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
     }
   }, [question.searchTerm]);
 
+  // Countdown timer
+  useEffect(() => {
+    if (timeLimit === 0 || revealed) return;
+
+    setTimeLeft(timeLimit);
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          onPass();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [timeLimit, revealed]);
+
+  const handleReveal = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setRevealed(true);
+  };
+
   const multiplier = isUnderdog ? 1.5 : 1;
   const val = question.value;
 
@@ -55,6 +84,8 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
     revealShard: { clipPath: 'polygon(0 0, 100% 0, 85% 100%, 0 100%)' },
     statusBar: { background: 'rgba(255, 255, 255, 0.03)' }
   };
+
+  const isUrgent = timeLimit > 0 && !revealed && timeLeft <= 10;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#080808] text-white overflow-y-auto animate-power-on">
@@ -91,8 +122,17 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
       {/* 3. Main Stage (Question Display) */}
       <main className="flex-1 flex flex-col justify-center px-12 md:px-24 max-w-7xl py-12">
         <div className="space-y-4">
+
+          {/* Timer (only when active) */}
+          {timeLimit > 0 && !revealed && (
+            <div className="mb-6">
+              <span className={`font-display font-black text-5xl italic tracking-tighter ${isUrgent ? 'text-[var(--color-error)] animate-pulse' : 'text-white/20'}`}>
+                {String(timeLeft).padStart(2, '0')}s
+              </span>
+            </div>
+          )}
+
           <h2 className="font-display font-black text-4xl md:text-5xl lg:text-6xl leading-[1] tracking-tighter uppercase italic animate-flicker" style={{ animationIterationCount: 2 }}>
-            {/* Logic: Highlight words in the question (simple heuristic: first word if it looks like a subject, or just display raw) */}
             {(() => {
               const words = question.question.split(' ');
               return words.map((word, i) => (
@@ -128,7 +168,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
         <div className="mt-20 flex items-center gap-12">
           {!revealed ? (
             <button 
-              onClick={() => setRevealed(true)}
+              onClick={handleReveal}
               style={STYLES.revealShard}
               className="bg-[var(--color-primary-dim)] text-black font-display font-black text-3xl px-16 py-6 hover:translate-x-1 transition-transform uppercase italic tracking-tighter"
             >
@@ -156,7 +196,9 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
         <div className="flex gap-16">
           <div className="flex flex-col">
             <span className="text-[var(--color-outline)] font-display font-bold text-[8px] tracking-widest uppercase mb-1">TIME REMAINING</span>
-            <span className="text-[var(--color-primary-dim)] font-display font-black text-xl italic tracking-tighter">14.02s</span>
+            <span className={`font-display font-black text-xl italic tracking-tighter ${isUrgent ? 'text-[var(--color-error)]' : 'text-[var(--color-primary-dim)]'}`}>
+              {timeLimit === 0 ? '∞' : revealed ? 'LOCKED' : `${timeLeft}s`}
+            </span>
           </div>
           <div className="flex flex-col">
             <span className="text-[var(--color-outline)] font-display font-bold text-[8px] tracking-widest uppercase mb-1">STAKE POOL</span>

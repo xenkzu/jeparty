@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Game } from '../../types/game';
 
 interface GameBoardProps {
@@ -10,6 +10,15 @@ interface GameBoardProps {
 const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame }) => {
   const categories = game.board.map(b => b.category);
   const activePlayer = game.players[game.turnIndex];
+  const questionsPerCategory = game.board[0]?.questions.length ?? 5;
+
+  // Auto-redirect to winner screen when all questions are answered
+  useEffect(() => {
+    const allAnswered = game.board.every(cat =>
+      cat.questions.every(q => q.status === 'answered')
+    );
+    if (allAnswered) onEndGame();
+  }, [game.board]);
 
   // Clip-path polygon styles derived from Stitch design
   const STYLES = {
@@ -62,7 +71,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
       </section>
 
       {/* 2. Game Board Grid (Fixed margin and flexible allocation) */}
-      <div className="grid grid-cols-5 gap-3" style={{ gridTemplateRows: 'repeat(6, minmax(100px, 1fr))' }}>
+      <div className="grid grid-cols-5 gap-3" style={{ gridTemplateRows: `repeat(${questionsPerCategory + 1}, minmax(${questionsPerCategory > 5 ? '80px' : '100px'}, 1fr))` }}>
         {/* Category Headers */}
         {categories.map((cat, i) => (
           <div 

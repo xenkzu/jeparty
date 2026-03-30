@@ -1,8 +1,16 @@
+export interface GameSettings {
+  difficulty: 'easy' | 'medium' | 'hard';
+  timeLimit: 30 | 60 | 0;
+  questionsPerCategory: 3 | 5 | 7;
+  scoringMode: ScoringMode;
+}
+
 export interface Game {
   players: Player[];
   categories: string[];
   board: Board;
   scoringMode: ScoringMode;
+  settings: GameSettings;
   turnIndex: number;
   currentQuestion: {
     categoryIndex: number;

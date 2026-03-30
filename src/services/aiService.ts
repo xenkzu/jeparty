@@ -1,81 +1,35 @@
-import { Board } from '../types/game';
+import { Board, GameSettings } from '../types/game';
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'qwen/qwen3-32b';
 
-/**
- * Generates a complete Jeopardy game board.
- * In production (Vercel): calls the /api/generate-board serverless function.
- * In dev (Vite): calls Groq directly to avoid 404 on missing serverless routes.
- */
-export const generateBoard = async (categories: string[]): Promise<Board> => {
-  try {
-    let board: Board;
-
-    if (import.meta.env.DEV) {
-      // ─── DEV MODE: Call Groq directly, fall back to mock if offline ──
-      if (!GROQ_API_KEY) {
-        console.warn('[DEV] No API key found — using mock board');
-        board = generateMockBoard(categories);
-      } else {
-        try {
-          board = await fetchBoardFromGroq(categories);
-        } catch (e) {
-          console.warn('[DEV] Groq call failed, using mock board:', e);
-          board = generateMockBoard(categories);
-        }
-      }
-    } else {
-      // ─── PROD MODE: Call Vercel serverless function ───────────────
-      const response = await fetch('/api/generate-board', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categories })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      board = await response.json();
-    }
-
-    // Verification check for board structure
-    if (!Array.isArray(board) || board.length !== 5) {
-      throw new Error('Invalid board structure from AI: Expected 5 categories');
-    }
-
-    for (const cat of board) {
-      if (!cat.category || !Array.isArray(cat.questions) || cat.questions.length !== 5) {
-        throw new Error('Invalid board structure from AI: Each category must have 5 questions');
-      }
-    }
-
-    return board;
-  } catch (error) {
-    console.error('Board Generation Failure:', error);
-    throw error instanceof Error ? error : new Error('Fatal error generating AI board.');
-  }
+// Point values by questionsPerCategory
+const POINT_VALUES: Record<number, number[]> = {
+  3: [100, 300, 500],
+  5: [100, 200, 300, 400, 500],
+  7: [100, 200, 300, 400, 500, 600, 700],
 };
 
-/**
- * Direct Groq call for local development (mirrors api/generate-board.ts prompt).
- */
-async function fetchBoardFromGroq(categories: string[]): Promise<Board> {
-  if (!GROQ_API_KEY) {
-    throw new Error('VITE_GROQ_API_KEY is not defined in .env');
-  }
+const DIFFICULTY_INSTRUCTION: Record<string, string> = {
+  easy: 'Generate casual, well-known trivia. Questions should be common knowledge that most people at a party would know. Pop culture, basic facts, famous names.',
+  medium: 'Generate moderately difficult trivia. Questions should require genuine knowledge of the topic. More specific facts, less obvious answers, niche but not obscure.',
+  hard: 'Generate expert-level trivia. Questions should be very specific and niche. Only true enthusiasts or experts would know these answers. Avoid obvious facts, focus on deep knowledge of the category.',
+};
 
+function buildPrompt(categories: string[], settings: GameSettings): string {
+  const { difficulty, questionsPerCategory } = settings;
+  const pointValues = POINT_VALUES[questionsPerCategory];
   const visualCategories = categories.filter(c => c.toLowerCase().endsWith(' -v'));
   const promptCategories = categories.map(c => c.replace(/ -v$/i, ''));
 
-  const prompt = `Generate a complete Jeopardy game board for these 5 categories: ${promptCategories.join(', ')}.
+  return `Generate a complete Jeopardy game board for these 5 categories: ${promptCategories.join(', ')}.
       Return ONLY valid JSON, no markdown, no backticks, no explanation.
       A JSON array of exactly 5 objects: { category: string, questions: [] }
       Each question object: { value: number, question: string, answer: string, status: 'hidden', searchTerm?: string }
-      
+
+      DIFFICULTY: ${DIFFICULTY_INSTRUCTION[difficulty]}
+
       SPECIAL INSTRUCTION:
       For [VISUAL] categories ([${visualCategories.map(c => c.replace(/ -v$/i, '')).join(', ')}]), generate questions that match the category theme exactly.
       However, only generate questions about subjects that have a real Wikipedia page with a thumbnail image.
@@ -97,9 +51,9 @@ async function fetchBoardFromGroq(categories: string[]): Promise<Board> {
        - imageSource stays 'wikipedia' for all visual questions
        - The answer field must match the searchTerm subject exactly.
        - The question text should be "Guess the character" or "Who is this?".
-      
+
       For all other categories, DO NOT include a searchTerm field.
-      Make questions fun/casual. Each category must have exactly 5 questions (100, 200, 300, 400, 500).
+      Make questions fun/casual. Each category must have exactly ${questionsPerCategory} questions with point values: ${pointValues.join(', ')}.
 
       QUESTION QUALITY RULES — follow strictly:
        1. Every question MUST be phrased as a question ending with a '?'
@@ -111,25 +65,86 @@ async function fetchBoardFromGroq(categories: string[]): Promise<Board> {
           BAD: 'It is Paris', 'The answer is Einstein'
 
        3. Questions must NEVER repeat within the same category
-          Each of the 5 questions must test a completely different aspect of the category
+          Each of the ${questionsPerCategory} questions must test a completely different aspect of the category
 
        4. Questions must NEVER be ambiguous — only one correct answer is possible
 
-      DIFFICULTY SCALING RULES — strictly follow this for every category:
-       100 points → Extremely easy, common knowledge, anyone would know this
-                    Example for 'Science': 'What planet do we live on?'
-       200 points → Easy, basic knowledge, most people would know this
-                    Example for 'Science': 'What gas do plants absorb from the air?'
-       300 points → Medium, requires some knowledge of the topic
-                    Example for 'Science': 'What is the chemical symbol for gold?'
-       400 points → Hard, requires good knowledge of the topic
-                    Example for 'Science': 'What is the speed of light in km/s?'
-       500 points → Expert level, only enthusiasts or experts would know this
-                    Example for 'Science': 'What is the half-life of Carbon-14?'
+      DIFFICULTY SCALING RULES — strictly follow for every category:
+       ${pointValues.map((v, i) => {
+         const labels = ['Extremely easy — anyone would know this', 'Easy — most people would know', 'Medium — requires some knowledge', 'Hard — requires strong knowledge', 'Expert level — enthusiasts/experts only', 'Very expert — deep niche knowledge', 'Master level — almost nobody knows this'];
+         return `${v} points → ${labels[Math.min(i, labels.length - 1)]}`;
+       }).join('\n       ')}
 
        The difficulty jump between each tier must be noticeable.
-       NEVER put a hard question at 100 or an easy question at 500.
-       Generate questions in order: 100 first (easiest) → 500 last (hardest)`;
+       Generate questions in order: ${pointValues[0]} first (easiest) → ${pointValues[pointValues.length - 1]} last (hardest)`;
+}
+
+/**
+ * Generates a complete Jeopardy game board.
+ * In production (Vercel): calls the /api/generate-board serverless function.
+ * In dev (Vite): calls Groq directly to avoid 404 on missing serverless routes.
+ */
+export const generateBoard = async (categories: string[], settings: GameSettings): Promise<Board> => {
+  try {
+    let board: Board;
+    const qCount = settings.questionsPerCategory;
+
+    if (import.meta.env.DEV) {
+      // ─── DEV MODE: Call Groq directly, fall back to mock if offline ──
+      if (!GROQ_API_KEY) {
+        console.warn('[DEV] No API key found — using mock board');
+        board = generateMockBoard(categories, settings);
+      } else {
+        try {
+          board = await fetchBoardFromGroq(categories, settings);
+        } catch (e) {
+          console.warn('[DEV] Groq call failed, using mock board:', e);
+          board = generateMockBoard(categories, settings);
+        }
+      }
+    } else {
+      // ─── PROD MODE: Call Vercel serverless function ───────────────
+      const response = await fetch('/api/generate-board', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categories, settings })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      board = await response.json();
+    }
+
+    // Verify board structure with variable question count
+    if (!Array.isArray(board) || board.length !== 5) {
+      throw new Error('Invalid board structure from AI: Expected 5 categories');
+    }
+
+    for (const cat of board) {
+      if (!cat.category || !Array.isArray(cat.questions) || cat.questions.length !== qCount) {
+        throw new Error(`Invalid board structure from AI: Each category must have ${qCount} questions`);
+      }
+    }
+
+    return board;
+  } catch (error) {
+    console.error('Board Generation Failure:', error);
+    throw error instanceof Error ? error : new Error('Fatal error generating AI board.');
+  }
+};
+
+/**
+ * Direct Groq call for local development (mirrors api/generate-board.ts prompt).
+ */
+async function fetchBoardFromGroq(categories: string[], settings: GameSettings): Promise<Board> {
+  if (!GROQ_API_KEY) {
+    throw new Error('VITE_GROQ_API_KEY is not defined in .env');
+  }
+
+  const prompt = buildPrompt(categories, settings);
 
   const response = await fetch(GROQ_BASE_URL, {
     method: 'POST',
@@ -163,8 +178,8 @@ async function fetchBoardFromGroq(categories: string[]): Promise<Board> {
 /**
  * Generates a mock board for offline dev testing.
  */
-function generateMockBoard(categories: string[]): Board {
-  const values = [100, 200, 300, 400, 500];
+function generateMockBoard(categories: string[], settings: GameSettings): Board {
+  const values = POINT_VALUES[settings.questionsPerCategory];
   return categories.map(cat => {
     const cleanCat = cat.replace(/ -v$/i, '');
     const isVisual = cat.toLowerCase().endsWith(' -v');

@@ -14,10 +14,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { categories } = req.body;
+  const { categories, settings } = req.body;
   if (!categories || !Array.isArray(categories)) {
     return res.status(400).json({ error: 'Missing or invalid categories' });
   }
+
+  const difficulty: string = settings?.difficulty || 'medium';
+  const questionsPerCategory: number = settings?.questionsPerCategory || 5;
+
+  const DIFFICULTY_INSTRUCTION: Record<string, string> = {
+    easy: 'Generate casual, well-known trivia. Questions should be common knowledge that most people at a party would know. Pop culture, basic facts, famous names.',
+    medium: 'Generate moderately difficult trivia. Questions should require genuine knowledge of the topic. More specific facts, less obvious answers, niche but not obscure.',
+    hard: 'Generate expert-level trivia. Questions should be very specific and niche. Only true enthusiasts or experts would know these answers. Avoid obvious facts, focus on deep knowledge.',
+  };
+  const POINT_VALUES: Record<number, number[]> = {
+    3: [100, 300, 500],
+    5: [100, 200, 300, 400, 500],
+    7: [100, 200, 300, 400, 500, 600, 700],
+  };
+  const pointValues = POINT_VALUES[questionsPerCategory] || POINT_VALUES[5];
 
   const API_KEY = process.env.VITE_GROQ_API_KEY;
   const BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -30,7 +45,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       Return ONLY valid JSON, no markdown, no backticks, no explanation.
       A JSON array of exactly 5 objects: { category: string, questions: [] }
       Each question object: { value: number, question: string, answer: string, status: 'hidden', searchTerm?: string }
-      
+
+      DIFFICULTY: ${DIFFICULTY_INSTRUCTION[difficulty] || DIFFICULTY_INSTRUCTION.medium}
+
       SPECIAL INSTRUCTION:
       For [VISUAL] categories ([${visualCategories.map(c => c.replace(/ -v$/i, '')).join(', ')}]), generate questions that match the category theme exactly.
       However, only generate questions about subjects that have a real Wikipedia page with a thumbnail image.
@@ -54,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
        - The question text should be "Guess the character" or "Who is this?".
       
       For all other categories, DO NOT include a searchTerm field.
-      Make questions fun/casual. Each category must have exactly 5 questions (100, 200, 300, 400, 500).
+      Make questions fun/casual. Each category must have exactly ${questionsPerCategory} questions with point values: ${pointValues.join(', ')}.
 
       QUESTION QUALITY RULES — follow strictly:
        1. Every question MUST be phrased as a question ending with a '?'
@@ -83,8 +100,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     Example for 'Science': 'What is the half-life of Carbon-14?'
 
        The difficulty jump between each tier must be noticeable.
-       NEVER put a hard question at 100 or an easy question at 500.
-       Generate questions in order: 100 first (easiest) → 500 last (hardest)`;
+       NEVER put a hard question at ${pointValues[0]} or an easy question at ${pointValues[pointValues.length-1]}.
+       Generate questions in order: ${pointValues[0]} first (easiest) → ${pointValues[pointValues.length-1]} last (hardest)`;
 
   try {
     const response = await fetch(BASE_URL, {

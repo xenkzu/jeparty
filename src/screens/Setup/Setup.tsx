@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import Title from '../../components/ui/Title';
+import { GameSettings } from '../../types/game';
 
 interface SetupProps {
-  onStart: (players: string[], categories: string[], scoringMode: 'normal' | 'advanced') => void;
+  onStart: (players: string[], categories: string[], settings: GameSettings) => void;
+  currentSettings: GameSettings;
 }
 
 const PlayerInput = ({
@@ -28,7 +30,6 @@ const PlayerInput = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
-      {/* Logic Wiring: Delete trigger using existing branding patterns */}
       {onRemove && (
         <button
           onClick={onRemove}
@@ -57,18 +58,14 @@ const CategoryInput = ({ index, value, onChange }: { index: number; value: strin
   </div>
 );
 
-const Setup: React.FC<SetupProps> = ({ onStart }) => {
+const Setup: React.FC<SetupProps> = ({ onStart, currentSettings }) => {
   const [players, setPlayers] = useState<string[]>(['', '']);
   const [categories, setCategories] = useState<string[]>(['', '', '', '', '']);
-  const [advancedMode, setAdvancedMode] = useState(true);
 
   const addPlayer = () => {
     if (players.length < 8) setPlayers([...players, '']);
   };
 
-  /**
-   * Logic Wiring: Remove player by index, maintaining minimum of 2.
-   */
   const removePlayer = (index: number) => {
     if (players.length > 2) {
       const newPlayers = [...players];
@@ -90,6 +87,13 @@ const Setup: React.FC<SetupProps> = ({ onStart }) => {
   };
 
   const isFormValid = players.every((p: string) => p.trim() !== '') && categories.every((c: string) => c.trim() !== '');
+
+  const settingsSummary = [
+    currentSettings.difficulty.toUpperCase(),
+    currentSettings.timeLimit === 0 ? 'UNLIMITED' : `${currentSettings.timeLimit}S`,
+    `${currentSettings.questionsPerCategory}Q`,
+    currentSettings.scoringMode === 'advanced' ? 'ADVANCED' : 'STANDARD',
+  ].join(' · ');
 
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-12 pb-24">
@@ -141,27 +145,19 @@ const Setup: React.FC<SetupProps> = ({ onStart }) => {
             </div>
           </div>
 
-          {/* Settings / Alert Block */}
-          <button
-            onClick={() => setAdvancedMode(!advancedMode)}
-            className="w-full flex items-stretch gap-4 bg-[#1A1A1A] hover:bg-[#222222] transition-colors text-left"
-          >
-            <div className={`w-12 flex items-center justify-center transition-colors ${advancedMode ? 'bg-tertiary-container' : 'bg-[#333333]'}`}>
-              <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="square" strokeLinejoin="miter" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          {/* Settings Button — now just a read-only summary; clicking opens global modal via nav cog */}
+          <div className="w-full flex items-stretch gap-4 bg-[#1A1A1A] text-left">
+            <div className="w-12 flex items-center justify-center bg-[#333333]">
+              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="square" strokeLinejoin="miter" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="square" strokeLinejoin="miter" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
             <div className="flex flex-col justify-center py-4 pr-4">
-              <span className="text-white font-display font-bold text-base md:text-lg">
-                {advancedMode ? 'PERMANENT DEATH ENABLED' : 'STANDARD SCORING ENABLED'}
-              </span>
-              <span className="text-[#666666] font-body text-xs mt-1">
-                {advancedMode
-                  ? 'Scores reset upon exit. Players disconnected during the prompt phase will be purged.'
-                  : 'Scores persist. A more resilient option for casual data streams.'}
-              </span>
+              <span className="text-white font-display font-bold text-base md:text-lg">GAME SETTINGS</span>
+              <span className="text-tertiary-container font-body text-xs mt-1 tracking-widest">{settingsSummary}</span>
             </div>
-          </button>
+        </div>
+
         </div>
 
         {/* Right Column: Categories & Start */}
@@ -207,19 +203,16 @@ const Setup: React.FC<SetupProps> = ({ onStart }) => {
           </div>
 
           {/* Start Game Button */}
-          {/* Logic Wiring: trimmed data passed to onStart with correctly mapped scoringMode string */}
           <button
             disabled={!isFormValid}
             onClick={() => onStart(
               players.map(p => p.trim()),
               categories.map(c => c.trim()),
-              advancedMode ? 'advanced' : 'normal'
+              currentSettings
             )}
             className={`mt-4 relative group transition-all duration-300 ${!isFormValid ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:-translate-y-1 hover:translate-x-1 hover:animate-scanline'}`}
           >
-            {/* White Shadow Background Component */}
             <div className="absolute inset-0 bg-white [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)] translate-y-2 -translate-x-2 group-hover:translate-y-4 group-hover:-translate-x-4 transition-transform duration-300"></div>
-
             <div className="relative bg-tertiary-container flex items-center justify-between p-8 md:p-12 [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)]">
               <span className="font-display font-bold text-5xl md:text-7xl uppercase leading-[0.85] text-on-tertiary-container tracking-tighter text-left">
                 START<br />GAME

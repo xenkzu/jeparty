@@ -4,18 +4,45 @@ import GameBoard from './screens/GameBoard/GameBoard';
 import QuestionModal from './screens/QuestionModal/QuestionModal';
 import EndScreen from './screens/EndScreen/EndScreen';
 import { generateBoard } from './services/aiService';
-import { Game, ScoringMode } from './types/game';
+import { Game, GameSettings } from './types/game';
+
+const DEFAULT_SETTINGS: GameSettings = {
+  difficulty: 'medium',
+  timeLimit: 60,
+  questionsPerCategory: 5,
+  scoringMode: 'normal',
+};
+
+function OptionButton({ label, sub, selected, onClick }: { label: string; sub?: string; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 py-3 px-4 text-left border transition-colors ${
+        selected
+          ? 'bg-tertiary-container text-on-tertiary-container border-tertiary-container'
+          : 'bg-[#1A1A1A] text-white/60 border-[#333333] hover:border-white/30'
+      }`}
+    >
+      <span className="font-display font-bold text-sm uppercase tracking-widest block">{label}</span>
+      {sub && <span className="font-body text-[0.6rem] tracking-widest opacity-60 mt-0.5 block">{sub}</span>}
+    </button>
+  );
+}
 
 type Screen = 'SETUP' | 'GAME' | 'QUESTION' | 'END';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('SETUP');
   const [gameState, setGameState] = useState<Game | null>(null);
-  // Log game state to console when initialized to resolve unused warning while in development
   if (gameState) console.debug("GAME_STREAM_INITIALIZED:", gameState.players.length, "players active");
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+
+  // Settings state — lives in App so cog button can open it from anywhere
+  const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pendingSettings, setPendingSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
 
   const navigateTo = (screen: Screen) => {
     setCurrentScreen(screen);
@@ -49,6 +76,7 @@ function App() {
             ...Array(4).fill({ category: 'DATA', questions: [{ value: 100, question: '?', answer: '!', status: 'hidden' }] })
           ],
           scoringMode: 'normal',
+          settings: { difficulty: 'medium', timeLimit: 60, questionsPerCategory: 5, scoringMode: 'normal' },
           turnIndex: 0,
           currentQuestion: screen === 'question' ? { categoryIndex: 0, questionIndex: 0 } : null
         };
@@ -65,20 +93,21 @@ function App() {
    * Logic Wiring: Handle game initialization via AI service.
    * Maps players, categories and scoring mode into a full Game state.
    */
-  const handleStart = async (players: string[], categories: string[], scoringMode: ScoringMode) => {
+  const handleStart = async (players: string[], categories: string[], settings: GameSettings) => {
     setIsLoading(true);
     setLoadingError(null);
 
     try {
       // Logic Wiring: Generate board via AI service
-      const board = await generateBoard(categories);
+      const board = await generateBoard(categories, settings);
 
       // Logic Wiring: Build full Game object using verified structure
       const newGame: Game = {
         players: players.map(name => ({ id: crypto.randomUUID(), name, score: 0 })),
         categories,
         board,
-        scoringMode,
+        scoringMode: settings.scoringMode,
+        settings,
         turnIndex: 0,
         currentQuestion: null
       };
@@ -126,9 +155,9 @@ function App() {
 
     switch (currentScreen) {
       case 'SETUP':
-        return <Setup onStart={handleStart} />;
+        return <Setup onStart={handleStart} currentSettings={settings} />;
       case 'GAME':
-        if (!gameState) return <Setup onStart={handleStart} />;
+        if (!gameState) return <Setup onStart={handleStart} currentSettings={settings} />;
         return (
           <GameBoard 
             game={gameState}
@@ -143,7 +172,8 @@ function App() {
           />
         );
       case 'QUESTION':
-        if (!gameState || !gameState.currentQuestion) return <Setup onStart={handleStart} />;
+        if (!gameState) return <Setup onStart={handleStart} currentSettings={settings} />;
+        if (!gameState.currentQuestion) { navigateTo('GAME'); return null; }
         
         const { categoryIndex, questionIndex } = gameState.currentQuestion;
         const currentQuestion = gameState.board[categoryIndex].questions[questionIndex];
@@ -183,6 +213,7 @@ function App() {
             activePlayer={activePlayer}
             isUnderdog={isUnderdog}
             scoringMode={gameState.scoringMode}
+            timeLimit={gameState.settings?.timeLimit ?? 0}
             onCorrect={() => {
               const multiplier = isUnderdog ? 1.5 : 1;
               updateScoreAndStatus(currentQuestion.value * multiplier);
@@ -202,7 +233,7 @@ function App() {
           />
         );
       case 'END':
-        if (!gameState) return <Setup onStart={handleStart} />;
+        if (!gameState) return <Setup onStart={handleStart} currentSettings={settings} />;
         return <EndScreen players={gameState.players} onRestart={() => {
           setGameState(null);
           setLoadingError(null);
@@ -216,6 +247,69 @@ function App() {
 
   return (
     <div className="h-screen w-full flex flex-col bg-surface-container-lowest text-on-surface overflow-hidden font-body">
+
+      {/* Global Settings Modal */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-[#0D0D0D] border-t-2 border-tertiary-container w-full max-w-lg relative p-8 flex flex-col gap-8">
+            <div className="absolute top-0 left-0 w-16 h-0.5 bg-tertiary-container shadow-[0_0_10px_rgba(254,0,0,0.5)]"></div>
+            <div className="absolute bottom-0 right-0 w-24 h-0.5 bg-tertiary-container shadow-[0_0_10px_rgba(254,0,0,0.5)]"></div>
+
+            <h2 className="font-display font-bold text-3xl tracking-tight text-white uppercase">SETTINGS</h2>
+
+            <div className="flex flex-col gap-3">
+              <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Difficulty</span>
+              <div className="flex gap-2">
+                <OptionButton label="EASY" sub="Common knowledge" selected={pendingSettings.difficulty === 'easy'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'easy' }))} />
+                <OptionButton label="MEDIUM" sub="Topic expertise" selected={pendingSettings.difficulty === 'medium'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'medium' }))} />
+                <OptionButton label="HARD" sub="Expert level" selected={pendingSettings.difficulty === 'hard'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'hard' }))} />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Time Limit</span>
+              <div className="flex gap-2">
+                <OptionButton label="30S" selected={pendingSettings.timeLimit === 30} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 30 }))} />
+                <OptionButton label="60S" selected={pendingSettings.timeLimit === 60} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 60 }))} />
+                <OptionButton label="UNLIMITED" selected={pendingSettings.timeLimit === 0} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 0 }))} />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Questions Per Category</span>
+              <div className="flex gap-2">
+                <OptionButton label="3" selected={pendingSettings.questionsPerCategory === 3} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 3 }))} />
+                <OptionButton label="5" selected={pendingSettings.questionsPerCategory === 5} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 5 }))} />
+                <OptionButton label="7" selected={pendingSettings.questionsPerCategory === 7} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 7 }))} />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Scoring Mode</span>
+              <div className="flex gap-2">
+                <OptionButton label="STANDARD" sub="Scores persist" selected={pendingSettings.scoringMode === 'normal'} onClick={() => setPendingSettings(s => ({ ...s, scoringMode: 'normal' }))} />
+                <OptionButton label="ADVANCED" sub="Permanent death" selected={pendingSettings.scoringMode === 'advanced'} onClick={() => setPendingSettings(s => ({ ...s, scoringMode: 'advanced' }))} />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className="flex-none px-6 py-4 border border-[#333333] text-white/40 font-display font-bold text-sm tracking-widest uppercase hover:border-white/30 transition-colors"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={() => { setSettings(pendingSettings); setSettingsOpen(false); }}
+                className="flex-1 bg-tertiary-container text-on-tertiary-container font-display font-bold text-sm tracking-widest uppercase py-4 hover:bg-white hover:text-black transition-colors [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)]"
+              >
+                SAVE SETTINGS
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Header */}
       <header className="h-20 shrink-0 border-b-2 border-tertiary-container flex items-center justify-between px-6 z-20 bg-surface-container-lowest relative">
         <div className="text-tertiary-container font-display font-bold text-3xl italic tracking-tighter uppercase">
@@ -234,7 +328,11 @@ function App() {
           <button className="hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="square" strokeLinejoin="miter" d="M3 3v18h18M9 9l3 3 3-3 6 6" /></svg>
           </button>
-          <button className="hover:text-white transition-colors">
+          <button
+            onClick={() => { setPendingSettings(settings); setSettingsOpen(true); }}
+            className="hover:text-white transition-colors"
+            title="Settings"
+          >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="square" strokeLinejoin="miter" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="square" strokeLinejoin="miter" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           </button>
           <button
@@ -319,3 +417,4 @@ function App() {
 }
 
 export default App;
+
