@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { resolveImage } from '../../services/imageService';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { CyberpunkButton } from '../../components/ui/CyberpunkButton';
 
 interface QuestionModalProps {
   question: { value: number; question: string; answer: string; status: string; searchTerm?: string };
@@ -83,7 +86,8 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   const isUrgent = timeLimit > 0 && !revealed && timeLeft <= 10;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#080808] text-white overflow-y-auto animate-power-on">
+    <div className="fixed inset-0 z-[99999] overflow-hidden">
+      <PageTransition className="w-full h-full flex flex-col bg-[#0A0A0A] text-white overflow-y-auto">
       {/* 1. Global Navigation Bar */}
       <nav className="h-16 shrink-0 flex items-center justify-between px-8 border-b border-white/5 bg-black/40">
         <div className="flex items-center gap-12">
@@ -162,26 +166,36 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
         {/* Action Layer */}
         <div className="mt-20 flex items-center gap-12">
           {!revealed ? (
-            <button 
+            <CyberpunkButton 
+              variant="primary"
               onClick={handleReveal}
               style={STYLES.revealShard}
-              className="bg-[var(--color-primary-dim)] text-black font-display font-black text-3xl px-16 py-6 hover:translate-x-1 transition-transform uppercase italic tracking-tighter"
+              className="bg-[var(--color-primary-dim)] text-black font-display font-black text-3xl px-16 py-6 uppercase italic tracking-tighter"
             >
               REVEAL ANSWER
-            </button>
+            </CyberpunkButton>
           ) : (
-            <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-left-4 duration-300">
+            <AnimatePresence>
+              {revealed && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex flex-col gap-8"
+                >
               <div className="bg-white/5 border-l-4 border-[var(--color-primary-dim)] p-8 animate-glitch">
                 <p className="font-display font-black text-4xl text-[var(--color-primary-dim)] italic tracking-tighter uppercase">
                   {question.answer}
                 </p>
               </div>
               <div className="flex items-center gap-10">
-                <button onClick={onWrong} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-[var(--color-error)] uppercase underline underline-offset-8 decoration-2 hover:decoration-[var(--color-error)]">WRONG (<span className="animate-blink-cursor">{previews.wrong}</span>)</button>
-                <button onClick={onCorrect} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-green-500 uppercase underline underline-offset-8 decoration-2 hover:decoration-green-500">CORRECT (+<span className="animate-blink-cursor">{previews.correct}</span>)</button>
-                <button onClick={onPass} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-white uppercase underline underline-offset-8 decoration-2 hover:decoration-white">PASS (<span className="animate-blink-cursor">{previews.pass}</span>)</button>
+                <CyberpunkButton variant="ghost" onClick={onWrong} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-[var(--color-error)] uppercase underline underline-offset-8 decoration-2 hover:decoration-[var(--color-error)]">WRONG (<span className="animate-blink-cursor">{previews.wrong}</span>)</CyberpunkButton>
+                <CyberpunkButton variant="ghost" onClick={onCorrect} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-green-500 uppercase underline underline-offset-8 decoration-2 hover:decoration-green-500">CORRECT (+<span className="animate-blink-cursor">{previews.correct}</span>)</CyberpunkButton>
+                <CyberpunkButton variant="ghost" onClick={onPass} className="font-display font-bold text-xs tracking-[0.3em] text-white/40 hover:text-white uppercase underline underline-offset-8 decoration-2 hover:decoration-white">PASS (<span className="animate-blink-cursor">{previews.pass}</span>)</CyberpunkButton>
               </div>
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           )}
         </div>
       </main>
@@ -205,6 +219,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
           <span className="text-white/40 font-display font-black text-xl italic tracking-tighter">x{multiplier.toFixed(1)}</span>
         </div>
       </footer>
+      </PageTransition>
     </div>
   );
 };

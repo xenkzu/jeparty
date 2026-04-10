@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Setup from './screens/Setup/Setup';
 import GameBoard from './screens/GameBoard/GameBoard';
 import QuestionModal from './screens/QuestionModal/QuestionModal';
@@ -35,6 +37,11 @@ type Screen = 'SETUP' | 'GAME' | 'QUESTION' | 'END';
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('SETUP');
   const [gameState, setGameState] = useState<Game | null>(null);
+  const gameStateRef = useRef<Game | null>(null);
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
   if (gameState) console.debug("GAME_STREAM_INITIALIZED:", gameState.players.length, "players active");
 
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +51,23 @@ function App() {
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pendingSettings, setPendingSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
+
+  const [navVisible, setNavVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const mainEl = document.getElementById('main-scroll-area');
+    if (!mainEl) return;
+    const handleScroll = () => {
+      const current = mainEl.scrollTop;
+      setNavVisible(current < lastScrollY.current || current < 60);
+      lastScrollY.current = current;
+    };
+    mainEl.addEventListener('scroll', handleScroll, { passive: true });
+    return () => mainEl.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const navigateTo = (screen: Screen) => {
     setCurrentScreen(screen);
@@ -123,6 +147,74 @@ function App() {
     }
   };
 
+  const updateScoreAndStatus = (categoryIndex: number, questionIndex: number, scoreDelta: number) => {
+    const gs = gameStateRef.current;
+    if (!gs) return;
+    const newPlayers = gs.players.map((p, i) =>
+      i === gs.turnIndex ? { ...p, score: p.score + scoreDelta } : p
+    );
+    const newBoard = gs.board.map((cat, ci) =>
+      ci !== categoryIndex ? cat : {
+        ...cat,
+        questions: cat.questions.map((q, qi) =>
+          qi !== questionIndex ? q : { ...q, status: 'answered' as const }
+        )
+      }
+    );
+    setGameState({
+      ...gs,
+      players: newPlayers,
+      board: newBoard,
+      currentQuestion: null,
+      turnIndex: (gs.turnIndex + 1) % gs.players.length
+    });
+    navigateTo('GAME');
+  };
+
+  const renderQuestionPortal = () => {
+    if (currentScreen !== 'QUESTION' || !gameState || !gameState.currentQuestion) return null;
+    const { categoryIndex, questionIndex } = gameState.currentQuestion;
+    const currentQuestion = gameState.board[categoryIndex].questions[questionIndex];
+    const activePlayer = gameState.players[gameState.turnIndex];
+    const minScore = Math.min(...gameState.players.map(p => p.score));
+    const isUnderdog = activePlayer.score === minScore;
+    return createPortal(
+      <QuestionModal
+        question={{
+          value: currentQuestion.value,
+          question: currentQuestion.question,
+          answer: currentQuestion.answer,
+          status: currentQuestion.status,
+          searchTerm: currentQuestion.searchTerm
+        }}
+        categoryName={gameState.board[categoryIndex].category}
+        activePlayer={activePlayer}
+        isUnderdog={isUnderdog}
+        scoringMode={gameState.scoringMode}
+        timeLimit={gameState.settings?.timeLimit ?? 0}
+        onCorrect={() => {
+          const multiplier = isUnderdog ? 1.5 : 1;
+          updateScoreAndStatus(categoryIndex, questionIndex, currentQuestion.value * multiplier);
+        }}
+        onWrong={() => {
+          const penalty = gameState.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
+          updateScoreAndStatus(categoryIndex, questionIndex, -penalty);
+        }}
+        onPass={() => {
+          const penalty = gameState.scoringMode === 'normal' ? currentQuestion.value * 0.5 : currentQuestion.value * 0.375;
+          updateScoreAndStatus(categoryIndex, questionIndex, -penalty);
+        }}
+        onClose={() => {
+          const gs = gameStateRef.current;
+          if (!gs) return;
+          setGameState({ ...gs, currentQuestion: null });
+          navigateTo('GAME');
+        }}
+      />,
+      document.body
+    );
+  };
+
   const renderScreen = () => {
     // Logic Wiring: Fullscreen loading state using existing aesthetics
     if (isLoading) {
@@ -174,64 +266,16 @@ function App() {
           />
         );
       case 'QUESTION':
+        // Modal is rendered via portal at the App root — return the board underneath
         if (!gameState) return <Setup onStart={handleStart} currentSettings={settings} />;
-        if (!gameState.currentQuestion) { navigateTo('GAME'); return null; }
-        
-        const { categoryIndex, questionIndex } = gameState.currentQuestion;
-        const currentQuestion = gameState.board[categoryIndex].questions[questionIndex];
-        const activePlayer = gameState.players[gameState.turnIndex];
-        
-        // Wire underdog boost: all players tied at the minimum score get the 1.5x multiplier
-        const minScore = Math.min(...gameState.players.map(p => p.score));
-        const isUnderdog = activePlayer.score === minScore;
-
-        const updateScoreAndStatus = (scoreDelta: number) => {
-          const newPlayers = [...gameState.players];
-          newPlayers[gameState.turnIndex].score += scoreDelta;
-
-          const newBoard = [...gameState.board];
-          newBoard[categoryIndex].questions[questionIndex].status = 'answered';
-
-          setGameState({
-            ...gameState,
-            players: newPlayers,
-            board: newBoard,
-            currentQuestion: null,
-            turnIndex: (gameState.turnIndex + 1) % gameState.players.length
-          });
-          navigateTo('GAME');
-        };
-
         return (
-          <QuestionModal
-            question={{
-              value: currentQuestion.value,
-              question: currentQuestion.question,
-              answer: currentQuestion.answer,
-              status: currentQuestion.status,
-              searchTerm: currentQuestion.searchTerm
+          <GameBoard
+            game={gameState}
+            onSelectQuestion={(categoryIndex, questionIndex) => {
+              setGameState({ ...gameState, currentQuestion: { categoryIndex, questionIndex } });
+              navigateTo('QUESTION');
             }}
-            categoryName={gameState.board[categoryIndex].category}
-            activePlayer={activePlayer}
-            isUnderdog={isUnderdog}
-            scoringMode={gameState.scoringMode}
-            timeLimit={gameState.settings?.timeLimit ?? 0}
-            onCorrect={() => {
-              const multiplier = isUnderdog ? 1.5 : 1;
-              updateScoreAndStatus(currentQuestion.value * multiplier);
-            }}
-            onWrong={() => {
-              const penalty = gameState.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
-              updateScoreAndStatus(-penalty);
-            }}
-            onPass={() => {
-              const penalty = gameState.scoringMode === 'normal' ? currentQuestion.value * 0.5 : currentQuestion.value * 0.375;
-              updateScoreAndStatus(-penalty);
-            }}
-            onClose={() => {
-              setGameState({ ...gameState, currentQuestion: null });
-              navigateTo('GAME');
-            }}
+            onEndGame={() => navigateTo('END')}
           />
         );
       case 'END':
@@ -248,7 +292,8 @@ function App() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-surface-container-lowest text-on-surface overflow-hidden font-body">
+    <>
+      <div className="h-screen w-full flex flex-col bg-surface-container-lowest text-on-surface overflow-hidden font-body">
 
       {/* Global Settings Modal */}
       {settingsOpen && (
@@ -312,8 +357,12 @@ function App() {
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="h-20 shrink-0 border-b-2 border-tertiary-container flex items-center justify-between px-6 z-20 bg-surface-container-lowest relative">
+      {/* Fixed navbar — never participates in document flow */}
+      <motion.header
+        animate={{ y: navVisible ? 0 : -84 }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+        className="fixed top-0 left-0 right-0 z-50 h-20 border-b-2 border-tertiary-container flex items-center justify-between px-6 bg-surface-container-lowest"
+      >
         <div className="text-tertiary-container font-display font-bold text-3xl italic tracking-tighter uppercase">
           JEPARTY
         </div>
@@ -343,13 +392,20 @@ function App() {
             NEW GAME
           </button>
         </div>
-      </header>
+      </motion.header>
+
+      {/* Spacer that matches header height — always present, never animates */}
+      <div className="h-20 shrink-0" />
 
       {/* Main Body */}
       <div className="flex-1 overflow-hidden flex relative">
 
         {/* Left Sidebar */}
-        <aside className="w-64 shrink-0 bg-surface-container-lowest border-r-2 border-tertiary-container flex flex-col justify-between hidden md:flex z-10">
+        <motion.aside
+          animate={{ width: sidebarOpen ? 256 : 0, opacity: sidebarOpen ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="shrink-0 bg-surface-container-lowest border-r-2 border-tertiary-container flex-col justify-between hidden md:flex z-10 overflow-hidden"
+        >
           <div className="flex flex-col">
             <div className="px-6 py-8 border-b border-[#1A1A1A] flex flex-col gap-1">
               <span className="text-tertiary-container font-display font-bold text-xl tracking-wider">HOST_01</span>
@@ -390,14 +446,28 @@ function App() {
               TERMINATE
             </button>
           </div>
-        </aside>
+        </motion.aside>
+
+        {/* Toggle button — sits at the edge of the sidebar */}
+        <motion.button
+          onClick={() => setSidebarOpen(prev => !prev)}
+          animate={{ x: sidebarOpen ? 256 : 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-tertiary-container text-black w-5 h-16 hidden md:flex items-center justify-center font-display font-bold text-xs hover:bg-white transition-colors"
+        >
+          {sidebarOpen ? '‹' : '›'}
+        </motion.button>
 
         {/* Scrollable Main Area (Where Setup Lives) */}
-        <main className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-[#0A0A0A] relative flex flex-col">
+        <main id="main-scroll-area" className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-[#0A0A0A] relative flex flex-col">
           <div className="w-full max-w-[1400px] mx-auto px-6 lg:px-12 pt-12 lg:pt-20 flex-1 flex flex-col">
 
             {/* Inject Active Screen Component */}
-            {renderScreen()}
+            <AnimatePresence mode="wait">
+              <div key={currentScreen} className="flex-1 flex flex-col">
+                {renderScreen()}
+              </div>
+            </AnimatePresence>
 
             {/* Global Footer (Visible underneath screens) */}
             <footer className="mt-8 mb-4 border-t-4 border-tertiary-container pt-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-8">
@@ -415,6 +485,10 @@ function App() {
 
       </div>
     </div>
+
+    {/* Bug 1: QuestionModal as a React Portal — renders above ALL layout including sidebar/header */}
+    {renderQuestionPortal()}
+    </>
   );
 }
 

@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Game } from '../../types/game';
+import { PageTransition } from '../../components/ui/PageTransition';
 
 interface GameBoardProps {
   game: Game;
@@ -28,6 +30,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-on-surface)] font-body p-6 overflow-y-auto">
       
       {/* 1. Scoreboard Bar (Auto-scaling columns 2-4) */}
@@ -37,8 +40,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
         {game.players.map((player, idx) => {
           const isActive = idx === game.turnIndex;
           return (
-            <div 
+            <motion.div 
               key={player.id}
+              layout
+              animate={isActive ? { scale: 1.02 } : { scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
               style={idx === 0 ? STYLES.shardedRight : {}}
               className={`p-5 flex flex-col justify-between relative transition-all duration-300 ${
                 isActive 
@@ -65,7 +71,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
                   ACTIVE_MODERATOR
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </section>
@@ -97,7 +103,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
                 return (
                   <div 
                     key={`${colIdx}-${rowIdx}`} 
-                    style={{ ...((totalIdx % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt) as React.CSSProperties), animationDelay: `${totalIdx * 30}ms` }}
+                    style={{ ...((totalIdx % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt) as React.CSSProperties) }}
                     className="h-full bg-[var(--color-surface-container-lowest)] flex flex-col items-center justify-center relative opacity-30 grayscale pointer-events-none animate-power-on animate-flicker"
                   >
                     <span className="font-display font-bold text-2xl md:text-4xl text-[var(--color-outline)] tracking-tighter line-through italic">{question.value}</span>
@@ -107,16 +113,21 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
               }
 
               return (
-                <div 
+                <motion.div 
                   key={`${colIdx}-${rowIdx}`} 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: totalIdx * 0.02, duration: 0.3, ease: 'backOut' }}
+                  whileHover={{ scale: 1.05, zIndex: 10 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => question.status === 'hidden' && onSelectQuestion(colIdx, rowIdx)}
-                  style={{ ...((totalIdx % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt) as React.CSSProperties), animationDelay: `${totalIdx * 30}ms` }}
-                  className="h-full bg-[var(--color-surface-container-low)] hover:bg-[var(--color-primary-dim)] group cursor-pointer flex flex-col items-center justify-center relative overflow-hidden transition-all duration-75 active:scale-95 animate-power-on hover:animate-glitch"
+                  style={{ ...((totalIdx % 2 === 0 ? STYLES.cellJagged : STYLES.cellJaggedAlt) as React.CSSProperties) }}
+                  className="h-full bg-[var(--color-surface-container-low)] hover:bg-[var(--color-primary-dim)] group cursor-pointer flex flex-col items-center justify-center relative overflow-hidden transition-all duration-75 animate-power-on hover:animate-glitch"
                 >
                   <span className="font-display font-bold text-2xl md:text-4xl text-[var(--color-primary-dim)] group-hover:text-black tracking-tighter transition-colors italic">
                     {question.value}
                   </span>
-                </div>
+                </motion.div>
               );
             })}
           </React.Fragment>
@@ -147,6 +158,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onSelectQuestion, onEndGame
         </div>
       </footer>
     </div>
+    </PageTransition>
   );
 };
 

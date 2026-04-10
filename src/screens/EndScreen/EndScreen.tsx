@@ -1,4 +1,7 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { CyberpunkButton } from '../../components/ui/CyberpunkButton';
 
 interface EndScreenProps {
   players: { name: string; score: number }[];
@@ -17,6 +20,7 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen w-full flex flex-col items-center justify-center py-12 px-6 relative overflow-hidden bg-[var(--color-background)]">
       
       {/* Background Dot Grid */}
@@ -42,7 +46,7 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
               style={{ ...STYLES.winnerBox, animationIterationCount: 'infinite', animationDuration: '2s' } as React.CSSProperties}
               className="bg-black border-2 border-[var(--color-tertiary-container)] px-16 py-6 transform -rotate-1 animate-glitch" 
             >
-              <span className="font-display font-black text-4xl md:text-6xl text-white tracking-widest uppercase italic">
+              <span className="font-display font-black text-4xl md:text-6xl text-white tracking-widest uppercase italic animate-rgb-split">
                 {winner.name}
               </span>
             </div>
@@ -66,8 +70,11 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
               const scoreColor = isWinner ? 'text-[var(--color-tertiary-container)]' : 'text-[var(--color-outline)]';
               
               return (
-                <div 
+                <motion.div 
                   key={player.name}
+                  initial={{ opacity: 0, x: -40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + idx * 0.12, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   className="flex items-center justify-between p-4 bg-white/5 border-l-2 border-white/5 animate-power-on"
                   style={{ animationDelay: `${idx * 150}ms` }}
                 >
@@ -82,7 +89,7 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
                   <div className={`font-display font-black text-xl italic tracking-tighter ${scoreColor}`}>
                     {player.score.toLocaleString()}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -90,14 +97,15 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
 
         {/* Restart Button Section */}
         <div className="flex flex-col items-center gap-8 w-full max-w-sm">
-          <button 
+          <CyberpunkButton 
+            variant="primary"
             onClick={onRestart}
             style={STYLES.restartBtn}
-            className="w-full bg-[var(--color-tertiary-container)] text-black font-display font-black text-2xl md:text-3xl px-12 py-8 transition-all transform hover:scale-[1.02] active:scale-95 uppercase italic tracking-tighter hover:animate-scanline flex items-center justify-center gap-4 group"
+            className="w-full bg-[var(--color-tertiary-container)] text-black font-display font-black text-2xl md:text-3xl px-12 py-8 uppercase italic tracking-tighter flex items-center justify-center gap-4 group"
           >
             <span className="material-symbols-outlined text-4xl group-hover:animate-pulse">bolt</span>
             <span>REMATCH_SEQUENCE</span>
-          </button>
+          </CyberpunkButton>
           
           <div className="flex items-center gap-4 w-full">
             <div className="flex-1 h-0.5 bg-white/5"></div>
@@ -110,6 +118,7 @@ const EndScreen: React.FC<EndScreenProps> = ({ players, onRestart }) => {
 
       </div>
     </div>
+    </PageTransition>
   );
 };
 

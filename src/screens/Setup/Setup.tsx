@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Title from '../../components/ui/Title';
 import { GameSettings } from '../../types/game';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { CyberpunkButton } from '../../components/ui/CyberpunkButton';
 
 interface SetupProps {
   onStart: (players: string[], categories: string[], settings: GameSettings) => void;
@@ -109,7 +112,8 @@ const Setup: React.FC<SetupProps> = ({ onStart, currentSettings }) => {
   ].join(' · ');
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-12 pb-24">
+    <PageTransition>
+      <div className="w-full max-w-6xl mx-auto flex flex-col gap-12 pb-24">
       {/* Header Section */}
       <header className="flex flex-col gap-4">
         <Title as="h1" className="text-tertiary-container leading-[0.85] text-[4rem] md:text-[7rem] tracking-tighter animate-glitch">
@@ -124,7 +128,12 @@ const Setup: React.FC<SetupProps> = ({ onStart, currentSettings }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
 
         {/* Left Column: Players & Settings */}
-        <div className="flex flex-col gap-6">
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col gap-6"
+        >
 
           {/* Players Block */}
           <div className="bg-[#0D0D0D] p-6 relative border-t-2 border-l border-r border-b border-[#1A1A1A]">
@@ -171,10 +180,15 @@ const Setup: React.FC<SetupProps> = ({ onStart, currentSettings }) => {
             </div>
         </div>
 
-        </div>
+        </motion.div>
 
         {/* Right Column: Categories & Start */}
-        <div className="flex flex-col gap-8">
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col gap-8"
+        >
 
           {/* Categories Block */}
           <div className="bg-[#1A1A1A] p-6 lg:p-10 [clip-path:polygon(0_0,100%_2%,100%_100%,0%_98%)] border-l-4 border-tertiary-container flex flex-col gap-6">
@@ -216,25 +230,26 @@ const Setup: React.FC<SetupProps> = ({ onStart, currentSettings }) => {
           </div>
 
           {/* Start Game Button */}
-          <button
+          <CyberpunkButton
+            variant="primary"
             disabled={!isFormValid}
             onClick={() => onStart(
               players.map(p => p.trim()),
               categories.map(c => c.trim()),
               currentSettings
             )}
-            className={`mt-4 relative group transition-all duration-300 ${!isFormValid ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:-translate-y-1 hover:translate-x-1 hover:animate-scanline'}`}
+            className={`mt-4 group bg-tertiary-container ${!isFormValid ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+            style={{ clipPath: 'polygon(0 0,100% 0,95% 100%,0% 100%)' }}
           >
-            <div className="absolute inset-0 bg-white [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)] translate-y-2 -translate-x-2 group-hover:translate-y-4 group-hover:-translate-x-4 transition-transform duration-300"></div>
-            <div className="relative bg-tertiary-container flex items-center justify-between p-8 md:p-12 [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)]">
+            <div className="flex items-center justify-between p-8 md:p-12 gap-8 min-w-[300px]">
               <span className="font-display font-bold text-5xl md:text-7xl uppercase leading-[0.85] text-on-tertiary-container tracking-tighter text-left">
                 START<br />GAME
               </span>
-              <svg className="w-16 h-16 md:w-24 md:h-24 text-on-tertiary-container" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-16 h-16 md:w-24 md:h-24 text-on-tertiary-container shrink-0" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M13 2L3 14h9v8l10-12h-9l0-8z" />
               </svg>
             </div>
-          </button>
+          </CyberpunkButton>
 
           {!isFormValid && (
             <p className="text-tertiary-container text-right text-xs uppercase font-bold tracking-widest mt-2 pr-4">
@@ -242,9 +257,10 @@ const Setup: React.FC<SetupProps> = ({ onStart, currentSettings }) => {
             </p>
           )}
 
-        </div>
+        </motion.div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 
