@@ -72,9 +72,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
        - The question text should be "Guess the character" or "Who is this?".
 
       For [AUDIO] categories ([${audioCategories.map(c => c.replace(/\s*-a\s*$/i, '').trim()).join(', ')}]), generate music trivia questions where players must identify a song.
-        - Set "searchTermAudio" to the song title and artist (e.g. "Bohemian Rhapsody Queen", "Billie Jean Michael Jackson").
-        - The "question" field should say something like "Guess the song:" or "Name this track:" — never reveal the title/artist in the question text.
-        - DO NOT set "searchTerm" (image) for audio questions. Only set "searchTermAudio".
+        - The "question" field must be EXACTLY one of these strings, chosen randomly:
+          "Guess the song." or "Name this track." or "What song is this?"
+          The question field must contain ZERO information about the song title, artist, album, or any identifying details.
+          CORRECT: "Guess the song."
+          WRONG: "Guess the song: Bohemian Rhapsody" or "Name this track by Queen" or "What song is this? (hint: it's from the 80s)"
+          The answer field contains the song title and artist. The question field contains nothing except the bare prompt string.
+        - DO NOT set "searchTerm" (image) for audio questions. Only set "searchTermAudio" to the song title and artist.
         - The "answer" field must be the song title and artist.
 
       For all other categories, DO NOT include a searchTerm or searchTermAudio field.
@@ -101,7 +105,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
        }).join('\n       ')}
 
         The difficulty jump between each tier must be noticeable.
-        Generate questions in order: ${pointValues[0]} first (easiest) → ${pointValues[pointValues.length - 1]} last (hardest)`;
+        Generate questions in order: ${pointValues[0]} first (easiest) → ${pointValues[pointValues.length - 1]} last (hardest)
+
+      QUESTION QUALITY RULES — follow strictly:
+       1. Every question MUST be phrased as a question ending with a '?'
+          GOOD: 'What is the capital of France?'
+          BAD: 'The capital of France', 'Name the capital of France'
+
+       2. Every answer must be short and specific — 1 to 4 words maximum
+          GOOD: 'Paris', 'Albert Einstein', 'The Eiffel Tower'
+          BAD: 'It is Paris', 'The answer is Einstein'
+
+       3. Questions must NEVER repeat within the same category
+          Each of the 5 questions must test a completely different aspect of the category
+
+       4. Questions must NEVER be ambiguous — only one correct answer is possible
+
+       5. For AUDIO questions specifically: the question field must be a bare prompt with NO colons followed by content, NO artist names, NO song titles, NO album names, NO year hints, NO genre hints. Literally just "Guess the song." — nothing else.
+`;
 
   try {
     const response = await fetch(BASE_URL, {

@@ -54,9 +54,13 @@ function buildPrompt(categories: string[], settings: GameSettings): string {
        - The question text should be "Guess the character" or "Who is this?".
 
       For [AUDIO] categories ([${audioCategories.map(c => c.replace(/\s*-a\s*$/i, '').trim()).join(', ')}]), generate music trivia questions where players must identify a song.
-        - Set "searchTermAudio" to the song title and artist (e.g. "Bohemian Rhapsody Queen", "Billie Jean Michael Jackson").
-        - The "question" field should say something like "Guess the song:" or "Name this track:" — never reveal the title/artist in the question text.
-        - DO NOT set "searchTerm" (image) for audio questions. Only set "searchTermAudio".
+        - The "question" field must be EXACTLY one of these strings, chosen randomly:
+          "Guess the song." or "Name this track." or "What song is this?"
+          The question field must contain ZERO information about the song title, artist, album, or any identifying details.
+          CORRECT: "Guess the song."
+          WRONG: "Guess the song: Bohemian Rhapsody" or "Name this track by Queen" or "What song is this? (hint: it's from the 80s)"
+          The answer field contains the song title and artist. The question field contains nothing except the bare prompt string.
+        - DO NOT set "searchTerm" (image) for audio questions. Only set "searchTermAudio" to the song title and artist.
         - The "answer" field must be the song title and artist.
 
       For all other categories, DO NOT include a searchTerm or searchTermAudio field.
@@ -74,7 +78,9 @@ function buildPrompt(categories: string[], settings: GameSettings): string {
        3. Questions must NEVER repeat within the same category
           Each of the ${questionsPerCategory} questions must test a completely different aspect of the category
 
-       4. Questions must NEVER be ambiguous — only one correct answer is possible
+        4. Questions must NEVER be ambiguous — only one correct answer is possible
+
+       5. For AUDIO questions specifically: the question field must be a bare prompt with NO colons followed by content, NO artist names, NO song titles, NO album names, NO year hints, NO genre hints. Literally just "Guess the song." — nothing else.
 
       DIFFICULTY SCALING RULES — strictly follow for every category:
        ${pointValues.map((v, i) => {

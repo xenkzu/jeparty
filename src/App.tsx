@@ -10,6 +10,7 @@ import { generateBoard } from './services/aiService';
 import { prefetchBoardImages } from './services/imageService';
 import { prefetchBoardAudio } from './services/audioService';
 import { Game, GameSettings } from './types/game';
+import { saveGame, loadGame, clearGame } from './services/persistenceService';
 
 const DEFAULT_SETTINGS: GameSettings = {
   difficulty: 'medium',
@@ -73,6 +74,7 @@ type Screen = 'SETUP' | 'GAME' | 'QUESTION' | 'END';
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('SETUP');
   const [gameState, setGameState] = useState<Game | null>(null);
+  const [showResumeBanner, setShowResumeBanner] = useState(false);
   const gameStateRef = useRef<Game | null>(null);
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -148,6 +150,25 @@ function App() {
     }
   }, []);
 
+  // Restore saved game on mount
+  useEffect(() => {
+    const saved = loadGame();
+    if (saved) {
+      setGameState(saved.gameState);
+      setCurrentScreen(saved.currentScreen);
+      setShowResumeBanner(true);
+      setTimeout(() => setShowResumeBanner(false), 4000);
+    }
+  }, []);
+
+  // Auto-save game state
+  useEffect(() => {
+    if (!gameState) return;
+    if (currentScreen === 'GAME' || currentScreen === 'QUESTION') {
+      saveGame(gameState, currentScreen);
+    }
+  }, [gameState, currentScreen]);
+
   /**
    * Logic Wiring: Handle game initialization via AI service.
    * Maps players, categories and scoring mode into a full Game state.
@@ -172,6 +193,7 @@ function App() {
       };
 
       setGameState(newGame);
+      clearGame();
       prefetchBoardImages(board);
       prefetchBoardAudio(board);
       navigateTo('GAME');
@@ -298,7 +320,7 @@ function App() {
               });
               navigateTo('QUESTION');
             }}
-            onEndGame={() => navigateTo('END')}
+            onEndGame={() => { clearGame(); navigateTo('END'); }}
           />
         );
       case 'QUESTION':
@@ -311,12 +333,13 @@ function App() {
               setGameState({ ...gameState, currentQuestion: { categoryIndex, questionIndex } });
               navigateTo('QUESTION');
             }}
-            onEndGame={() => navigateTo('END')}
+            onEndGame={() => { clearGame(); navigateTo('END'); }}
           />
         );
       case 'END':
         if (!gameState) return <Setup onStart={handleStart} currentSettings={settings} />;
         return <EndScreen players={gameState.players} onRestart={() => {
+          clearGame();
           setGameState(null);
           setLoadingError(null);
           setIsLoading(false);
@@ -467,7 +490,7 @@ function App() {
                   <span className="material-symbols-outlined text-xl">settings</span>
                 </button>
                 <button
-                  onClick={() => { setGameState(null); navigateTo('SETUP'); }}
+                  onClick={() => { clearGame(); setGameState(null); navigateTo('SETUP'); }}
                   className="bg-tertiary-container text-black px-6 py-2 font-sans font-black text-[10px] uppercase hover:bg-white transition-all btn-riot"
                 >
                   NEW GAME
@@ -538,6 +561,33 @@ function App() {
 
       {/* Bug 1: QuestionModal as a React Portal — renders above ALL layout including sidebar/header */}
       {renderQuestionPortal()}
+
+      <AnimatePresence>
+        {showResumeBanner && (
+          <motion.div
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-[200] bg-[#0d0d0d] border border-tertiary-container/60 px-8 py-3 flex items-center gap-4"
+          >
+            <motion.div
+              className="w-2 h-2 bg-green-500 rounded-full"
+              animate={{ opacity: [1, 0, 1] }}
+              transition={{ duration: 0.6, repeat: Infinity }}
+            />
+            <span className="font-mono text-xs text-white/70 tracking-widest uppercase">
+              SESSION_RESTORED — Game resumed from last save
+            </span>
+            <button
+              onClick={() => setShowResumeBanner(false)}
+              className="text-white/30 hover:text-white font-mono text-xs ml-4"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
