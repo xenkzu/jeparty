@@ -40,3 +40,7 @@ export function prefetchBoardAudio(board: any): void {
     }
   }
 }
+export function clearAudioCache(searchTerm: string): void {
+  audioCache.delete(searchTerm);
+  inFlight.delete(searchTerm);
+}

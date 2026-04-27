@@ -315,7 +315,7 @@ const CategoryInput = ({ index, value, onChange }: { index: number; value: strin
     style={{ animationDelay: `${index * 100}ms` }}
   >
     <div className="flex items-center gap-6 group-focus-within:translate-x-2 transition-transform">
-      <span className="font-display font-light text-3xl md:text-4xl text-[#1a1a1a] group-focus-within:text-tertiary-container transition-colors">
+      <span className={`font-display font-light text-3xl md:text-4xl transition-colors ${value.trim() ? 'text-white' : 'text-[#1a1a1a]'} group-focus-within:text-tertiary-container`}>
         {String(index + 1).padStart(2, '0')}
       </span>
       <div className="flex-1 relative flex flex-col">
@@ -372,6 +372,19 @@ const Setup: React.FC<SetupProps> = ({ onStart, onOpenSettings, currentSettings 
   };
 
   const isFormValid = players.every((p: string) => p.trim() !== '') && categories.every((c: string) => c.trim() !== '');
+
+  // Auto-scroll when form is valid
+  useEffect(() => {
+    if (isFormValid) {
+      const timer = setTimeout(() => {
+        const startBtn = document.getElementById('initialize-carnage-trigger');
+        if (startBtn) {
+          startBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isFormValid]);
 
   const settingsSummary = [
     currentSettings.difficulty.toUpperCase(),
@@ -560,27 +573,68 @@ const Setup: React.FC<SetupProps> = ({ onStart, onOpenSettings, currentSettings 
             </div>
           </div>
 
-          {/* Start Game Button */}
-          <CyberpunkButton
-            variant={isFormValid ? "primary" : "ghost"}
+          {/* Start Game Button - Technical Industrial Redesign */}
+          <motion.button
+            id="initialize-carnage-trigger"
+            whileTap={isFormValid ? { scale: 0.98 } : {}}
             disabled={!isFormValid}
             onClick={() => onStart(
               players.map(p => p.trim()),
               categories.map(c => c.trim()),
               currentSettings
             )}
-            className={`mt-4 group ${!isFormValid ? 'opacity-40 cursor-not-allowed' : ''}`}
-            style={{ clipPath: 'polygon(0 0,100% 0,95% 100%,0% 100%)' }}
+            className={`mt-12 relative group overflow-hidden ${!isFormValid ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
           >
-            <div className="bg-tertiary-container flex items-center justify-between p-8 md:p-12 gap-8 min-w-[300px]">
-              <span className="font-display font-bold text-5xl md:text-7xl uppercase leading-[0.85] text-on-tertiary-container tracking-tighter text-left">
-                START<br />GAME
-              </span>
-              <svg className="w-16 h-16 md:w-24 md:h-24 text-on-tertiary-container shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M13 2L3 14h9v8l10-12h-9l0-8z" />
-              </svg>
+            {/* Background Layers */}
+            <div 
+              className="bg-tertiary-container p-0.5 pt-1 transition-all duration-300"
+              style={{ clipPath: 'polygon(0 0, 98% 0, 100% 20%, 100% 100%, 2% 100%, 0% 80%)' }}
+            >
+              <div 
+                className="flex items-center justify-between p-5 md:p-8 relative overflow-hidden transition-colors duration-300 bg-[#0A0A0A] group-hover:bg-tertiary-container"
+                style={{ clipPath: 'polygon(0 0, 98% 0, 100% 20%, 100% 100%, 2% 100%, 0% 80%)' }}
+              >
+                {/* Robust Light Sweep Implementation - Restored and Fixed */}
+                {isFormValid && (
+                  <motion.div
+                    className="absolute -top-[50%] h-[200%] w-64 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-[25deg] pointer-events-none z-20"
+                    animate={{ left: ['-100%', '300%'] }}
+                    transition={{ 
+                      duration: 2.5, 
+                      repeat: Infinity, 
+                      repeatDelay: 2.5,
+                      ease: "easeInOut" 
+                    }}
+                  />
+                )}
+
+                {/* Subtle scanning bar */}
+                <motion.div 
+                  className="absolute inset-0 w-full h-[1px] bg-tertiary-container/10 z-0"
+                  animate={{ top: ['0%', '100%', '0%'] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                />
+
+                <span className="font-display font-black text-3xl md:text-5xl italic uppercase leading-none text-tertiary-container group-hover:text-black tracking-tight whitespace-nowrap transition-colors relative z-10">
+                  START GAME
+                </span>
+
+                <motion.svg 
+                  className="w-10 h-10 md:w-12 md:h-12 text-tertiary-container group-hover:text-black transition-colors relative z-10" 
+                  viewBox="0 0 24 24" 
+                  fill="currentColor"
+                  animate={{ opacity: [1, 0.7, 1, 0.9, 1] }}
+                  transition={{ duration: 3, repeat: Infinity, times: [0, 0.2, 0.4, 0.6, 1] }}
+                >
+                  <path d="M13 2L3 14h9v8l10-12h-9l0-8z" />
+                </motion.svg>
+              </div>
             </div>
-          </CyberpunkButton>
+
+            {/* Corner Decals */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-tertiary-container opacity-40" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-tertiary-container opacity-40" />
+          </motion.button>
 
           {!isFormValid && (
             <p className="text-tertiary-container text-right text-xs uppercase font-bold tracking-widest mt-2 pr-4">

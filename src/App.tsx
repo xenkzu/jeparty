@@ -6,9 +6,9 @@ import Setup from './screens/Setup/Setup';
 import GameBoard from './screens/GameBoard/GameBoard';
 import QuestionModal from './screens/QuestionModal/QuestionModal';
 import EndScreen from './screens/EndScreen/EndScreen';
-import { generateBoard } from './services/aiService';
+import { generateBoard, generateNewAudioQuestion } from './services/aiService';
 import { prefetchBoardImages } from './services/imageService';
-import { prefetchBoardAudio } from './services/audioService';
+import { prefetchBoardAudio, clearAudioCache } from './services/audioService';
 import { Game, GameSettings } from './types/game';
 import { saveGame, loadGame, clearGame } from './services/persistenceService';
 
@@ -204,71 +204,140 @@ function App() {
     }
   };
 
-  const updateScoreAndStatus = (categoryIndex: number, questionIndex: number, scoreDelta: number) => {
+  const handleTurnTransition = (scoreDelta: number, markAsAnswered: boolean = false) => {
     const gs = gameStateRef.current;
-    if (!gs) return;
+    if (!gs || !gs.currentQuestion) return;
+    const { categoryIndex, questionIndex } = gs.currentQuestion;
+
     const newPlayers = gs.players.map((p, i) =>
       i === gs.turnIndex ? { ...p, score: p.score + scoreDelta } : p
     );
-    const newBoard = gs.board.map((cat, ci) =>
-      ci !== categoryIndex ? cat : {
-        ...cat,
-        questions: cat.questions.map((q, qi) =>
-          qi !== questionIndex ? q : { ...q, status: 'answered' as const }
+
+    const newBoard = markAsAnswered 
+      ? gs.board.map((cat, ci) =>
+          ci !== categoryIndex ? cat : {
+            ...cat,
+            questions: cat.questions.map((q, qi) =>
+              qi !== questionIndex ? q : { ...q, status: 'answered' as const }
+            )
+          }
         )
-      }
-    );
+      : gs.board;
+
     setGameState({
       ...gs,
       players: newPlayers,
       board: newBoard,
-      currentQuestion: null,
+      currentQuestion: markAsAnswered ? null : gs.currentQuestion,
       turnIndex: (gs.turnIndex + 1) % gs.players.length
     });
-    navigateTo('GAME');
+
+    if (markAsAnswered) navigateTo('GAME');
+  };
+
+  const handleRefreshAudio = async () => {
+    const gs = gameState;
+    if (!gs || !gs.currentQuestion) return;
+    const { categoryIndex, questionIndex } = gs.currentQuestion;
+    const category = gs.board[categoryIndex].category;
+    
+    try {
+      // Clear cache for the current term to ensure fresh fetch
+      if (gs.board[categoryIndex].questions[questionIndex].searchTermAudio) {
+        clearAudioCache(gs.board[categoryIndex].questions[questionIndex].searchTermAudio!);
+      }
+
+      const newQ = await generateNewAudioQuestion(category, gs.settings.difficulty);
+      const newBoard = gs.board.map((cat, ci) => 
+        ci !== categoryIndex ? cat : {
+          ...cat,
+          questions: cat.questions.map((q, qi) => 
+            qi !== questionIndex ? q : {
+              ...q,
+              question: newQ.question,
+              answer: newQ.answer,
+              searchTermAudio: newQ.searchTermAudio
+            }
+          )
+        }
+      );
+      setGameState({ ...gs, board: newBoard });
+    } catch (e) {
+      console.error("Failed to refresh audio question:", e);
+    }
   };
 
   const renderQuestionPortal = () => {
-    if (currentScreen !== 'QUESTION' || !gameState || !gameState.currentQuestion) return null;
-    const { categoryIndex, questionIndex } = gameState.currentQuestion;
-    const currentQuestion = gameState.board[categoryIndex].questions[questionIndex];
-    const activePlayer = gameState.players[gameState.turnIndex];
-    const minScore = Math.min(...gameState.players.map(p => p.score));
+    const gs = gameState;
+    if (!gs || !gs.currentQuestion) return null;
+    const { categoryIndex, questionIndex } = gs.currentQuestion;
+    const currentQuestion = gs.board[categoryIndex].questions[questionIndex];
+    const activePlayer = gs.players[gs.turnIndex];
+    const minScore = Math.min(...gs.players.map(p => p.score));
     const isUnderdog = activePlayer.score === minScore;
+    
     return createPortal(
-      <QuestionModal
-        question={{
-          value: currentQuestion.value,
-          question: currentQuestion.question,
-          answer: currentQuestion.answer,
-          status: currentQuestion.status,
-          searchTerm: currentQuestion.searchTerm,
-          searchTermAudio: currentQuestion.searchTermAudio
-        }}
-        categoryName={gameState.board[categoryIndex].category}
-        activePlayer={activePlayer}
-        isUnderdog={isUnderdog}
-        scoringMode={gameState.scoringMode}
-        timeLimit={gameState.settings?.timeLimit ?? 0}
-        onCorrect={() => {
-          const multiplier = isUnderdog ? 1.5 : 1;
-          updateScoreAndStatus(categoryIndex, questionIndex, currentQuestion.value * multiplier);
-        }}
-        onWrong={() => {
-          const penalty = gameState.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
-          updateScoreAndStatus(categoryIndex, questionIndex, -penalty);
-        }}
-        onPass={() => {
-          const penalty = gameState.scoringMode === 'normal' ? currentQuestion.value * 0.5 : currentQuestion.value * 0.375;
-          updateScoreAndStatus(categoryIndex, questionIndex, -penalty);
-        }}
-        onClose={() => {
-          const gs = gameStateRef.current;
-          if (!gs) return;
-          setGameState({ ...gs, currentQuestion: null });
-          navigateTo('GAME');
-        }}
-      />,
+      <AnimatePresence mode="wait">
+        {currentScreen === 'QUESTION' && (
+          <motion.div
+            key="question-portal-wrap"
+            initial={{ opacity: 0, scale: 1.1, clipPath: 'inset(45% 0 45% 0)' }}
+            animate={{ opacity: 1, scale: 1, clipPath: 'inset(0% 0 0% 0)' }}
+            exit={{ opacity: 0, scale: 0.9, clipPath: 'inset(50% 0 50% 0)' }}
+            transition={{ 
+              duration: 0.6, 
+              ease: [0.16, 1, 0.3, 1]
+            }}
+            className="fixed inset-0 z-[999999] bg-[#0A0A0A]"
+          >
+            {/* Rapid Scanline Background during transition */}
+            <motion.div 
+              initial={{ opacity: 0.8 }}
+              animate={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="absolute inset-0 z-10 bg-[var(--color-primary-dim)] pointer-events-none opacity-20"
+            />
+            
+            <QuestionModal
+              question={{
+                value: currentQuestion.value,
+                question: currentQuestion.question,
+                answer: currentQuestion.answer,
+                status: currentQuestion.status,
+                searchTerm: currentQuestion.searchTerm,
+                searchTermAudio: currentQuestion.searchTermAudio
+              }}
+              categoryName={gs.board[categoryIndex].category}
+              activePlayer={activePlayer}
+              isUnderdog={isUnderdog}
+              scoringMode={gs.scoringMode}
+              timeLimit={gs.settings?.timeLimit ?? 0}
+              onCorrect={() => {
+                const multiplier = isUnderdog ? 1.5 : 1;
+                handleTurnTransition(currentQuestion.value * multiplier, true);
+              }}
+              onWrong={() => {
+                const penalty = gs.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
+                handleTurnTransition(-penalty, true);
+              }}
+              onPass={() => {
+                handleTurnTransition(0, false);
+              }}
+              onFinalPass={() => {
+                handleTurnTransition(0, true);
+              }}
+              onSkip={(penalty: number) => {
+                handleTurnTransition(-penalty, false);
+              }}
+              onClose={() => {
+                setGameState(gs => gs ? { ...gs, currentQuestion: null } : null);
+                navigateTo('GAME');
+              }}
+              onRefreshAudio={handleRefreshAudio}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>,
       document.body
     );
   };

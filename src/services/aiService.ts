@@ -201,6 +201,50 @@ async function fetchBoardFromGroq(categories: string[], settings: GameSettings):
 }
 
 /**
+ * Generates a single replacement question for a category.
+ */
+export async function generateNewAudioQuestion(category: string, difficulty: string): Promise<{ question: string; answer: string; searchTermAudio: string }> {
+  if (!GROQ_API_KEY) {
+    return {
+      question: "Guess the song.",
+      answer: "Mock Song REPLACEMENT",
+      searchTermAudio: "Shape of You Ed Sheeran"
+    };
+  }
+
+  const prompt = `Generate ONE single music trivia question for the category: "${category}".
+      Return ONLY valid JSON, no markdown.
+      { "question": string, "answer": string, "searchTermAudio": string }
+      
+      RULES:
+      - Phrasing: "Guess the song." or "Name this track."
+      - answer: Song title and artist.
+      - searchTermAudio: Song title and artist for search.
+      - Difficulty: ${difficulty}`;
+
+  const response = await fetch(GROQ_BASE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.9,
+      max_tokens: 500
+    })
+  });
+
+  const data = await response.json();
+  let text = data.choices[0]?.message?.content || '{}';
+  text = text.replace(/```json\n?|```/g, '').trim();
+  return JSON.parse(text);
+}
+
+export default generateBoard;
+
+/**
  * Generates a mock board for offline dev testing.
  */
 function generateMockBoard(categories: string[], settings: GameSettings): Board {
@@ -223,5 +267,3 @@ function generateMockBoard(categories: string[], settings: GameSettings): Board 
     };
   });
 }
-
-export default generateBoard;
