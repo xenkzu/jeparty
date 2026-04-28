@@ -6,17 +6,23 @@ import Setup from './screens/Setup/Setup';
 import GameBoard from './screens/GameBoard/GameBoard';
 import QuestionModal from './screens/QuestionModal/QuestionModal';
 import EndScreen from './screens/EndScreen/EndScreen';
+import RulesScreen from './screens/RulesScreen/RulesScreen';
 import { generateBoard, generateNewAudioQuestion } from './services/aiService';
 import { prefetchBoardImages } from './services/imageService';
 import { prefetchBoardAudio, clearAudioCache } from './services/audioService';
 import { Game, GameSettings } from './types/game';
 import { saveGame, loadGame, clearGame } from './services/persistenceService';
+import SetupV1 from './screens/v1/SetupV1';
+import GameBoardV1 from './screens/v1/GameBoardV1';
+import QuestionModalV1 from './screens/v1/QuestionModalV1';
+import EndScreenV1 from './screens/v1/EndScreenV1';
 
 const DEFAULT_SETTINGS: GameSettings = {
   difficulty: 'medium',
   timeLimit: 60,
   questionsPerCategory: 5,
   scoringMode: 'normal',
+  uiVersion: 'v2',
 };
 
 const FooterVisualizer = () => {
@@ -69,7 +75,7 @@ function OptionButton({ label, sub, selected, onClick }: { label: string; sub?: 
   );
 }
 
-type Screen = 'SETUP' | 'GAME' | 'QUESTION' | 'END';
+type Screen = 'SETUP' | 'GAME' | 'QUESTION' | 'END' | 'RULES';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('SETUP');
@@ -298,43 +304,76 @@ function App() {
               className="absolute inset-0 z-10 bg-[var(--color-primary-dim)] pointer-events-none opacity-20"
             />
             
-            <QuestionModal
-              question={{
-                value: currentQuestion.value,
-                question: currentQuestion.question,
-                answer: currentQuestion.answer,
-                status: currentQuestion.status,
-                searchTerm: currentQuestion.searchTerm,
-                searchTermAudio: currentQuestion.searchTermAudio
-              }}
-              categoryName={gs.board[categoryIndex].category}
-              activePlayer={activePlayer}
-              isUnderdog={isUnderdog}
-              scoringMode={gs.scoringMode}
-              timeLimit={gs.settings?.timeLimit ?? 0}
-              onCorrect={() => {
-                const multiplier = isUnderdog ? 1.5 : 1;
-                handleTurnTransition(currentQuestion.value * multiplier, true);
-              }}
-              onWrong={() => {
-                const penalty = gs.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
-                handleTurnTransition(-penalty, true);
-              }}
-              onPass={() => {
-                handleTurnTransition(0, false);
-              }}
-              onFinalPass={() => {
-                handleTurnTransition(0, true);
-              }}
-              onSkip={(penalty: number) => {
-                handleTurnTransition(-penalty, false);
-              }}
-              onClose={() => {
-                setGameState(gs => gs ? { ...gs, currentQuestion: null } : null);
-                navigateTo('GAME');
-              }}
-              onRefreshAudio={handleRefreshAudio}
-            />
+            {settings.uiVersion === 'v1' ? (
+              <QuestionModalV1
+                question={{
+                  value: currentQuestion.value,
+                  question: currentQuestion.question,
+                  answer: currentQuestion.answer,
+                  status: currentQuestion.status,
+                  searchTerm: currentQuestion.searchTerm,
+                  searchTermAudio: currentQuestion.searchTermAudio
+                }}
+                categoryName={gs.board[categoryIndex].category}
+                activePlayer={activePlayer}
+                isUnderdog={isUnderdog}
+                scoringMode={gs.scoringMode}
+                timeLimit={gs.settings?.timeLimit ?? 0}
+                onCorrect={() => {
+                  const multiplier = isUnderdog ? 1.5 : 1;
+                  handleTurnTransition(currentQuestion.value * multiplier, true);
+                }}
+                onWrong={() => {
+                  const penalty = gs.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
+                  handleTurnTransition(-penalty, true);
+                }}
+                onPass={() => {
+                  handleTurnTransition(0, false);
+                }}
+                onClose={() => {
+                  setGameState(gs => gs ? { ...gs, currentQuestion: null } : null);
+                  navigateTo('GAME');
+                }}
+              />
+            ) : (
+              <QuestionModal
+                question={{
+                  value: currentQuestion.value,
+                  question: currentQuestion.question,
+                  answer: currentQuestion.answer,
+                  status: currentQuestion.status,
+                  searchTerm: currentQuestion.searchTerm,
+                  searchTermAudio: currentQuestion.searchTermAudio
+                }}
+                categoryName={gs.board[categoryIndex].category}
+                activePlayer={activePlayer}
+                isUnderdog={isUnderdog}
+                scoringMode={gs.scoringMode}
+                timeLimit={gs.settings?.timeLimit ?? 0}
+                onCorrect={() => {
+                  const multiplier = isUnderdog ? 1.5 : 1;
+                  handleTurnTransition(currentQuestion.value * multiplier, true);
+                }}
+                onWrong={() => {
+                  const penalty = gs.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
+                  handleTurnTransition(-penalty, true);
+                }}
+                onPass={() => {
+                  handleTurnTransition(0, false);
+                }}
+                onFinalPass={() => {
+                  handleTurnTransition(0, true);
+                }}
+                onSkip={(penalty: number) => {
+                  handleTurnTransition(-penalty, false);
+                }}
+                onClose={() => {
+                  setGameState(gs => gs ? { ...gs, currentQuestion: null } : null);
+                  navigateTo('GAME');
+                }}
+                onRefreshAudio={handleRefreshAudio}
+              />
+            )}
           </motion.div>
         )}
       </AnimatePresence>,
@@ -376,44 +415,97 @@ function App() {
 
     switch (currentScreen) {
       case 'SETUP':
-        return <Setup onStart={handleStart} onOpenSettings={() => setSettingsOpen(true)} currentSettings={settings} />;
+        return settings.uiVersion === 'v1' 
+          ? <SetupV1 onStart={handleStart} onOpenSettings={() => setSettingsOpen(true)} currentSettings={settings} />
+          : <Setup onStart={handleStart} onOpenSettings={() => setSettingsOpen(true)} currentSettings={settings} />;
       case 'GAME':
-        if (!gameState) return <Setup onStart={handleStart} currentSettings={settings} />;
-        return (
-          <GameBoard
-            game={gameState}
-            onSelectQuestion={(categoryIndex, questionIndex) => {
-              setGameState({
-                ...gameState,
-                currentQuestion: { categoryIndex, questionIndex }
-              });
-              navigateTo('QUESTION');
-            }}
-            onEndGame={() => { clearGame(); navigateTo('END'); }}
-          />
-        );
+        if (!gameState) return settings.uiVersion === 'v1' 
+          ? <SetupV1 onStart={handleStart} currentSettings={settings} />
+          : <Setup onStart={handleStart} currentSettings={settings} />;
+        return settings.uiVersion === 'v1'
+          ? (
+            <GameBoardV1
+              game={gameState}
+              onSelectQuestion={(categoryIndex, questionIndex) => {
+                setGameState({
+                  ...gameState,
+                  currentQuestion: { categoryIndex, questionIndex }
+                });
+                navigateTo('QUESTION');
+              }}
+              onEndGame={() => { clearGame(); navigateTo('END'); }}
+            />
+          )
+          : (
+            <GameBoard
+              game={gameState}
+              onSelectQuestion={(categoryIndex, questionIndex) => {
+                setGameState({
+                  ...gameState,
+                  currentQuestion: { categoryIndex, questionIndex }
+                });
+                navigateTo('QUESTION');
+              }}
+              onEndGame={() => { clearGame(); navigateTo('END'); }}
+            />
+          );
       case 'QUESTION':
         // Modal is rendered via portal at the App root — return the board underneath
-        if (!gameState) return <Setup onStart={handleStart} currentSettings={settings} />;
-        return (
-          <GameBoard
-            game={gameState}
-            onSelectQuestion={(categoryIndex, questionIndex) => {
-              setGameState({ ...gameState, currentQuestion: { categoryIndex, questionIndex } });
-              navigateTo('QUESTION');
-            }}
-            onEndGame={() => { clearGame(); navigateTo('END'); }}
-          />
-        );
+        if (!gameState) return settings.uiVersion === 'v1'
+          ? <SetupV1 onStart={handleStart} currentSettings={settings} />
+          : <Setup onStart={handleStart} currentSettings={settings} />;
+        return settings.uiVersion === 'v1'
+          ? (
+            <GameBoardV1
+              game={gameState}
+              onSelectQuestion={(categoryIndex, questionIndex) => {
+                setGameState({ ...gameState, currentQuestion: { categoryIndex, questionIndex } });
+                navigateTo('QUESTION');
+              }}
+              onEndGame={() => { clearGame(); navigateTo('END'); }}
+            />
+          )
+          : (
+            <GameBoard
+              game={gameState}
+              onSelectQuestion={(categoryIndex, questionIndex) => {
+                setGameState({ ...gameState, currentQuestion: { categoryIndex, questionIndex } });
+                navigateTo('QUESTION');
+              }}
+              onEndGame={() => { clearGame(); navigateTo('END'); }}
+            />
+          );
+      case 'RULES':
+        return <RulesScreen />;
       case 'END':
-        if (!gameState) return <Setup onStart={handleStart} currentSettings={settings} />;
-        return <EndScreen players={gameState.players} onRestart={() => {
-          clearGame();
-          setGameState(null);
-          setLoadingError(null);
-          setIsLoading(false);
-          navigateTo('SETUP');
-        }} />;
+        if (!gameState) return settings.uiVersion === 'v1'
+          ? <SetupV1 onStart={handleStart} currentSettings={settings} />
+          : <Setup onStart={handleStart} currentSettings={settings} />;
+        return settings.uiVersion === 'v1'
+          ? (
+            <EndScreenV1
+              players={gameState.players}
+              onRestart={() => {
+                clearGame();
+                setGameState(null);
+                setLoadingError(null);
+                setIsLoading(false);
+                navigateTo('SETUP');
+              }}
+            />
+          )
+          : (
+            <EndScreen
+              players={gameState.players}
+              onRestart={() => {
+                clearGame();
+                setGameState(null);
+                setLoadingError(null);
+                setIsLoading(false);
+                navigateTo('SETUP');
+              }}
+            />
+          );
       default:
         return <div>Error loading game state.</div>;
     }
@@ -481,6 +573,14 @@ function App() {
                   </div>
                 </div>
 
+                <div className="flex flex-col gap-3">
+                  <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">System Version</span>
+                  <div className="flex gap-2">
+                    <OptionButton label="V1_CLASSIC" sub="Cyberpunk v1" selected={pendingSettings.uiVersion === 'v1'} onClick={() => setPendingSettings(s => ({ ...s, uiVersion: 'v1' }))} />
+                    <OptionButton label="V2_MODERN" sub="Aesthetic v2" selected={pendingSettings.uiVersion === 'v2'} onClick={() => setPendingSettings(s => ({ ...s, uiVersion: 'v2' }))} />
+                  </div>
+                </div>
+
                 <div className="flex gap-3">
                   <button
                     onClick={() => setSettingsOpen(false)}
@@ -519,7 +619,7 @@ function App() {
                 {[
                   { id: 'GAME', label: 'BOARD', icon: 'grid_view', screens: ['GAME', 'QUESTION'] },
                   { id: 'SETUP', label: 'PLAYERS', icon: 'groups', screens: ['SETUP'] },
-                  { id: 'END', label: currentScreen === 'END' ? 'RESULTS' : 'RULES', icon: 'gavel', screens: ['END'] },
+                  { id: 'RULES', label: 'RULES', icon: 'gavel', screens: ['RULES', 'END'] },
                 ].map((tab) => {
                   const isActive = tab.screens.includes(currentScreen);
                   return (
