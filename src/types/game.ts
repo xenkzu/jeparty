@@ -3,6 +3,7 @@ export interface GameSettings {
   timeLimit: 30 | 60 | 0;
   questionsPerCategory: 3 | 5 | 7;
   scoringMode: ScoringMode;
+  uiVersion: 'v1' | 'v2';
 }
 
 export interface Game {
