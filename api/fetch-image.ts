@@ -1,59 +1,73 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const BLOCKED_FRAGMENTS = ['logo', 'icon', 'banner', 'Flag_of', '.svg', 'apple-touch', 'placeholder', 'no-image', 'questionmark'];
+const USER_AGENT = 'Jeparty/1.0 (https://github.com/xenkzu/jeparty; yashkaul777@gmail.com)';
 
 function isValidImageUrl(
   url: unknown,
   width?: number,
-  height?: number
+  height?: number,
+  strictLandscape: boolean = false
 ): url is string {
   if (typeof url !== 'string' || !url.startsWith('https://')) return false;
   const lower = url.toLowerCase();
   if (BLOCKED_FRAGMENTS.some(frag => lower.includes(frag))) return false;
+  
   if (typeof width === 'number' && width < 200) return false;
-  if (typeof width === 'number' && typeof height === 'number' && height > width * 1.5) return false;
+  
+  if (typeof width === 'number' && typeof height === 'number') {
+    if (strictLandscape && height >= width) return false;
+    if (height > width * 1.8) return false; // Allow a bit more for portrait in generic mode
+  }
   return true;
 }
 
-// SOURCE 1: Your existing Wikipedia logic — keep verbatim, just wrap it here
+// Wikipedia Summary (Best for characters)
 async function fetchFromWikipedia(term: string): Promise<string | null> {
   try {
     const res = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term)}`
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term)}`,
+      { headers: { 'User-Agent': USER_AGENT } }
     );
     if (!res.ok) return null;
     const data = await res.json();
     const url = data.thumbnail?.source;
-    const w = data.thumbnail?.width;
-    const h = data.thumbnail?.height;
-    if (isValidImageUrl(url, w, h) && (typeof w !== 'number' || w >= 200)) return url;
+    if (isValidImageUrl(url, data.thumbnail?.width, data.thumbnail?.height)) return url;
     return null;
-  } catch {
+  } catch (e) {
+    console.error('Wiki Summary Error:', e);
     return null;
   }
 }
 
-// SOURCE 2: Wikimedia Commons image search (free, no key)
-async function fetchFromWikimediaCommons(term: string): Promise<string | null> {
+// Wikimedia Commons Search (Supports Offsets)
+async function fetchFromWikimediaCommons(term: string, offset: number = 0, strictLandscape: boolean = false): Promise<string | null> {
   try {
-    const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(term)}&gsrlimit=1&prop=imageinfo&iiprop=url&iiurlwidth=800&format=json&origin=*`;
-    const res = await fetch(url);
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(term)}&gsrlimit=10&gsroffset=${offset}&prop=imageinfo&iiprop=url|size&iiurlwidth=1000&format=json&origin=*`;
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
     if (!res.ok) return null;
     const data = await res.json();
     const pages = Object.values(data?.query?.pages ?? {}) as any[];
-    return pages[0]?.imageinfo?.[0]?.thumburl ?? null;
-  } catch {
+    
+    // Find the first valid image in the results
+    for (const page of pages) {
+      const info = page.imageinfo?.[0];
+      if (isValidImageUrl(info?.thumburl, info?.width, info?.height, strictLandscape)) {
+        return info.thumburl;
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error('Commons Search Error:', e);
     return null;
   }
 }
 
-// SOURCE 3: DuckDuckGo unofficial image vqd scrape (free, no key)
-// DDG requires a two-step fetch: first get the vqd token, then hit the image API
-async function fetchFromDuckDuckGo(term: string): Promise<string | null> {
+// DuckDuckGo Image Search (Fallback)
+async function fetchFromDuckDuckGo(term: string, offset: number = 0): Promise<string | null> {
   try {
-    // Step 1: Get vqd token from DDG HTML
     const initRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(term)}&iax=images&ia=images`, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Jeparty/1.0)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
     });
     if (!initRes.ok) return null;
     const html = await initRes.text();
@@ -61,47 +75,59 @@ async function fetchFromDuckDuckGo(term: string): Promise<string | null> {
     if (!vqdMatch) return null;
     const vqd = vqdMatch[1];
 
-    // Step 2: Hit DDG image API with the vqd token
     const imgRes = await fetch(
       `https://duckduckgo.com/i.js?q=${encodeURIComponent(term)}&vqd=${vqd}&f=,,,,,&p=1`,
-      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Jeparty/1.0)', 'Referer': 'https://duckduckgo.com/' } }
+      { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Referer': 'https://duckduckgo.com/' } }
     );
     if (!imgRes.ok) return null;
     const data = await imgRes.json();
-    return data?.results?.[0]?.image ?? null;
-  } catch {
+    const results = data?.results ?? [];
+    if (results.length > 0) {
+      // Use offset to pick a different image
+      const idx = offset % results.length;
+      return results[idx]?.image ?? null;
+    }
+    return null;
+  } catch (e) {
+    console.error('DDG Error:', e);
     return null;
   }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Support both query param (new approach) and body payload (old approach)
-  const term = req.query.term || req.body?.searchTerm;
+  const term = (req.query.term || req.body?.searchTerm) as string;
+  const offsetStr = (req.query.offset || '0') as string;
+  const landscape = req.query.landscape === 'true';
+  const offset = parseInt(offsetStr, 10) || 0;
   
-  if (!term || typeof term !== 'string') {
+  if (!term) {
     return res.status(400).json({ error: 'Missing search term' });
   }
 
-  const [wikiResult, commonsResult, ddgResult] = await Promise.allSettled([
-    fetchFromWikipedia(term),
-    fetchFromWikimediaCommons(term),
-    fetchFromDuckDuckGo(term),
-  ]);
+  console.log(`Fetching image for: "${term}" (offset: ${offset}, landscape: ${landscape})`);
 
-  const imageUrl =
-    (wikiResult.status === 'fulfilled' && wikiResult.value) ||
-    (commonsResult.status === 'fulfilled' && commonsResult.value) ||
-    (ddgResult.status === 'fulfilled' && ddgResult.value) ||
-    null;
+  // Try sources in sequence for better control over quality vs reliability
+  // 1. Wikipedia Summary (best for primary subject)
+  let imageUrl = await fetchFromWikipedia(term);
+  
+  // 2. If no summary or offset requested, try Commons
+  if (!imageUrl || offset > 0) {
+    imageUrl = await fetchFromWikimediaCommons(term, offset, landscape);
+  }
+
+  // 3. Fallback to DDG
+  if (!imageUrl) {
+    imageUrl = await fetchFromDuckDuckGo(term, offset);
+  }
 
   if (!imageUrl) {
+    console.warn(`No image found for term: ${term}`);
     return res.status(404).json({ error: 'No image found from any source' });
   }
 

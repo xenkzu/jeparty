@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { categories, settings } = req.body;
+  const { categories, settings, exclusions = {} } = req.body;
   if (!categories || !Array.isArray(categories)) {
     return res.status(400).json({ error: 'Missing or invalid categories' });
   }
@@ -42,10 +42,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const audioCategories = categories.filter(c => c.toLowerCase().endsWith(' -a'));
   const promptCategories = categories.map(c => c.replace(/\s*-[v|a]\s*$/i, '').trim());
 
+  // Build soft-exclusion paragraph for the prompt
+  const exclusionLines = Object.entries(exclusions as Record<string, string[]>)
+    .filter(([, topics]) => topics.length > 0)
+    .map(([cat, topics]) => {
+      // Only send last 25 topics max per category to cap token usage
+      const recent = topics.slice(-25);
+      return `- "${cat}": recently covered [${recent.join(', ')}]`;
+    });
+
+  const exclusionBlock = exclusionLines.length > 0
+    ? `TOPIC MEMORY (soft exclusion — avoid repeating these recently used answers):
+${exclusionLines.join('\n')}
+Rules for topic memory:
+- Each topic above has a 75% chance of being excluded — randomly decide per topic
+- 25% chance any excluded topic CAN reappear if it fits the difficulty perfectly
+- Priority: explore different angles, subtopics, or lesser-known facts first
+- Never mention this exclusion logic in the output`
+    : '';
+
   const prompt = `Generate a complete Jeopardy game board for these 5 categories: ${promptCategories.join(', ')}.
       Return ONLY valid JSON, no markdown, no backticks, no explanation.
       A JSON array of exactly 5 objects: { category: string, questions: [] }
       Each question object: { value: number, question: string, answer: string, status: 'hidden', searchTerm?: string, searchTermAudio?: string }
+
+      ${exclusionBlock}
 
       DIFFICULTY: ${DIFFICULTY_INSTRUCTION[difficulty] || DIFFICULTY_INSTRUCTION.medium}
 

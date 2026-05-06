@@ -1,4 +1,5 @@
 import { Board, GameSettings } from '../types/game';
+import { getExclusionTopics, recordBoardTopics } from './topicMemoryService';
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -17,17 +18,38 @@ const DIFFICULTY_INSTRUCTION: Record<string, string> = {
   hard: 'Generate expert-level trivia. Questions should be very specific and niche. Only true enthusiasts or experts would know these answers. Avoid obvious facts, focus on deep knowledge of the category.',
 };
 
-function buildPrompt(categories: string[], settings: GameSettings): string {
+function buildPrompt(categories: string[], settings: GameSettings, exclusions: Record<string, string[]> = {}): string {
   const { difficulty, questionsPerCategory } = settings;
   const pointValues = POINT_VALUES[questionsPerCategory];
   const visualCategories = categories.filter(c => c.toLowerCase().endsWith(' -v'));
   const audioCategories = categories.filter(c => c.toLowerCase().endsWith(' -a'));
   const promptCategories = categories.map(c => c.replace(/\s*-[v|a]\s*$/i, '').trim());
 
+  // Build soft-exclusion paragraph for the prompt
+  const exclusionLines = Object.entries(exclusions)
+    .filter(([, topics]) => topics.length > 0)
+    .map(([cat, topics]) => {
+      // Only send last 25 topics max per category to cap token usage
+      const recent = topics.slice(-25);
+      return `- "${cat}": recently covered [${recent.join(', ')}]`;
+    });
+
+  const exclusionBlock = exclusionLines.length > 0
+    ? `TOPIC MEMORY (soft exclusion — avoid repeating these recently used answers):
+${exclusionLines.join('\n')}
+Rules for topic memory:
+- Each topic above has a 75% chance of being excluded — randomly decide per topic
+- 25% chance any excluded topic CAN reappear if it fits the difficulty perfectly
+- Priority: explore different angles, subtopics, or lesser-known facts first
+- Never mention this exclusion logic in the output`
+    : '';
+
   return `Generate a complete Jeopardy game board for these 5 categories: ${promptCategories.join(', ')}.
       Return ONLY valid JSON, no markdown, no backticks, no explanation.
       A JSON array of exactly 5 objects: { category: string, questions: [] }
       Each question object: { value: number, question: string, answer: string, status: 'hidden', searchTerm?: string, searchTermAudio?: string }
+
+      ${exclusionBlock}
 
       DIFFICULTY: ${DIFFICULTY_INSTRUCTION[difficulty]}
 
@@ -102,6 +124,8 @@ export const generateBoard = async (categories: string[], settings: GameSettings
     let board: Board;
     const qCount = settings.questionsPerCategory;
 
+    const exclusions = getExclusionTopics(categories);
+
     if (import.meta.env.DEV) {
       // ─── DEV MODE: Call Groq directly, fall back to mock if offline ──
       if (!GROQ_API_KEY) {
@@ -109,7 +133,7 @@ export const generateBoard = async (categories: string[], settings: GameSettings
         board = generateMockBoard(categories, settings);
       } else {
         try {
-          board = await fetchBoardFromGroq(categories, settings);
+          board = await fetchBoardFromGroq(categories, settings, exclusions);
         } catch (e) {
           console.error('[DEV] Groq API call failed. Check your API key and network. Error:', e);
           board = generateMockBoard(categories, settings);
@@ -120,7 +144,7 @@ export const generateBoard = async (categories: string[], settings: GameSettings
       const response = await fetch('/api/generate-board', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categories, settings })
+        body: JSON.stringify({ categories, settings, exclusions })
       });
 
       if (!response.ok) {
@@ -142,6 +166,9 @@ export const generateBoard = async (categories: string[], settings: GameSettings
       }
     }
 
+    // Record topics from this fresh board into memory
+    recordBoardTopics(board);
+
     return board;
   } catch (error) {
     console.error('Board Generation Failure:', error);
@@ -152,12 +179,12 @@ export const generateBoard = async (categories: string[], settings: GameSettings
 /**
  * Direct Groq call for local development (mirrors api/generate-board.ts prompt).
  */
-async function fetchBoardFromGroq(categories: string[], settings: GameSettings): Promise<Board> {
+async function fetchBoardFromGroq(categories: string[], settings: GameSettings, exclusions: Record<string, string[]> = {}): Promise<Board> {
   if (!GROQ_API_KEY) {
     throw new Error('VITE_GROQ_API_KEY is not defined in .env');
   }
 
-  const prompt = buildPrompt(categories, settings);
+  const prompt = buildPrompt(categories, settings, exclusions);
 
   const response = await fetch(GROQ_BASE_URL, {
     method: 'POST',
