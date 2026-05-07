@@ -6,6 +6,13 @@ export interface GameSettings {
   uiVersion: 'v1' | 'v2';
 }
 
+export interface SkipChain {
+  originalPlayerIndex: number;    // who passed first (Dev1)
+  originalTurnIndex: number;      // turnIndex value when pass happened
+  passedPlayerIndices: number[];  // players who have already seen this question
+  currentRecipientIndex: number;  // who is currently answering
+}
+
 export interface Game {
   players: Player[];
   categories: string[];
@@ -17,6 +24,7 @@ export interface Game {
     categoryIndex: number;
     questionIndex: number;
   } | null;
+  skipChain: SkipChain | null;    // null = no skip chain active
 }
 
 export type ScoringMode = 'normal' | 'advanced';

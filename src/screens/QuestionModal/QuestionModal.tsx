@@ -23,10 +23,11 @@ interface QuestionModalProps {
   onCorrect: () => void;
   onWrong: () => void;
   onPass: () => void;
-  onFinalPass: () => void;
-  onSkip: (penalty: number) => void;
   onClose: () => void;
   onRefreshAudio?: () => void;
+  isInSkipChain: boolean;
+  skipChainOriginalPlayer: string | null;
+  onForceReveal: () => void;
 }
 
 const QuestionModal: React.FC<QuestionModalProps> = ({
@@ -39,35 +40,19 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   onCorrect,
   onWrong,
   onPass,
-  onFinalPass,
-  onSkip,
   onClose,
-  onRefreshAudio
+  onRefreshAudio,
+  isInSkipChain,
+  skipChainOriginalPlayer,
+  onForceReveal
 }) => {
   const [revealed, setRevealed] = useState(false);
-  const [skipCount, setSkipCount] = useState(0);
-  const [showSkipNotif, setShowSkipNotif] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(timeLimit);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const handleSkip = () => {
-    if (skipCount === 0) {
-      const penalty = scoringMode === 'normal' ? question.value : question.value * 0.75;
-      onSkip(penalty);
-      setSkipCount(1);
-      setShowSkipNotif(true);
-      setTimeout(() => setShowSkipNotif(false), 3000);
-    } else {
-      setRevealed(true);
-      if (timerRef.current) clearInterval(timerRef.current);
-      setShowSkipNotif(true);
-      setTimeout(() => setShowSkipNotif(false), 3000);
-    }
-  };
 
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -123,9 +108,15 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   const val = question.value;
 
   const previews = {
-    correct: val * multiplier,
-    wrong: scoringMode === 'normal' ? -val : -val * 0.75,
-    pass: scoringMode === 'normal' ? -val * 0.5 : -val * 0.375,
+    correct: isInSkipChain
+      ? `+${val * 0.5}`
+      : `+${val * multiplier}`,
+    wrong: isInSkipChain
+      ? `-${val * 0.5}`
+      : scoringMode === 'normal' ? `-${val}` : `-${val * 0.75}`,
+    pass: isInSkipChain ? '0' : scoringMode === 'normal'
+      ? `-${val * 0.5}`
+      : `-${val * 0.375}`,
   };
 
   const STYLES = {
@@ -151,7 +142,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
               </div>
               
               {/* HUD Timer - Technical Gauge */}
-              {timeLimit > 0 && !revealed && skipCount === 0 && (
+              {timeLimit > 0 && !revealed && (
                 <div className="flex items-center gap-4 min-w-[120px]">
                   <span className="font-mono text-sm text-[#eb0000] font-black tabular-nums">
                     {String(timeLeft).padStart(2, '0')}S
@@ -174,6 +165,14 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
               </div>
               <div className="w-px h-4 bg-white/20"></div>
               <button 
+                onClick={onForceReveal}
+                className="text-white font-display text-[10px] uppercase tracking-[0.2em] font-black hover:text-[#eb0000] transition-all flex items-center gap-2 group"
+              >
+                <span className="material-symbols-outlined text-sm group-hover:rotate-90 transition-transform">visibility</span>
+                FORCE REVEAL
+              </button>
+              <div className="w-px h-4 bg-white/20"></div>
+              <button 
                 onClick={onClose}
                 className="text-white font-display text-[10px] uppercase tracking-[0.2em] font-black hover:text-[#eb0000] transition-all flex items-center gap-2 group"
               >
@@ -186,27 +185,21 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
           {/* Modal Content Canvas (Centered Question Zone) */}
           <section className="w-full flex-1 flex flex-col items-center justify-center relative py-12 px-8 md:px-16 overflow-y-auto">
             <div className="relative group w-full max-w-6xl mx-auto">
-              <AnimatePresence>
-                {showSkipNotif && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -50 }}
-                    className="fixed top-0 left-0 right-0 z-[100000] bg-black/80 backdrop-blur-md text-white px-6 py-3 flex items-center justify-center gap-4 border-b border-white/10 shadow-2xl pointer-events-none"
-                  >
-                    <span className="material-symbols-outlined text-sm animate-pulse">sync_alt</span>
-                    <p className="font-display text-xs uppercase tracking-[0.2em] opacity-80">TURN_TRANSFERRED</p>
-                    <p className="font-display text-xl md:text-2xl font-bold tracking-tighter uppercase">
-                      SKIP TO: {activePlayer.name}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
               <div className="absolute inset-0 bg-[#1f1f1f] -z-10 transform group-hover:scale-[1.005] transition-transform duration-150" style={STYLES.jaggedBorder}></div>
 
               <div className="p-8 md:p-12 flex flex-col gap-10">
                 <div className="space-y-6 text-left">
+                  {isInSkipChain && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center gap-4 mb-4 px-4 py-3 border-l-4 border-yellow-500 bg-yellow-500/5"
+                    >
+                      <span className="font-mono text-[10px] tracking-widest text-yellow-400 uppercase">
+                        ⚡ SKIP CHAIN ACTIVE — Original: {skipChainOriginalPlayer} — Correct: +50% · Wrong: -50% · Skip: 0pts
+                      </span>
+                    </motion.div>
+                  )}
                   <h1 className="font-display text-4xl md:text-7xl leading-[1.1] text-white uppercase tracking-tight">
                     {question.question.split(' ').map((word, i, arr) => (
                       <span key={i} className={i === arr.length - 1 ? 'text-[#eb0000]' : 'text-white'}>
@@ -280,7 +273,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
                         REVEAL ANSWER
                       </button>
                       <button
-                        onClick={handleSkip}
+                        onClick={onPass}
                         className="border-4 border-[#eb0000] text-[#eb0000] px-12 py-6 font-display text-3xl uppercase tracking-tight active:scale-95 transition-all hover:bg-[#eb0000] hover:text-black shadow-[6px_6px_0px_0px_rgba(235,0,0,0.2)]"
                         style={STYLES.shardBg}
                       >
@@ -301,27 +294,17 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
                         </div>
                         
                         <div className="flex flex-wrap gap-4 opacity-70 hover:opacity-100 transition-opacity justify-start">
-                          {skipCount > 0 ? (
-                            <button
-                              onClick={onFinalPass}
-                              className="bg-[#eb0000] text-black px-12 py-6 font-display text-3xl uppercase tracking-tight active:scale-95 transition-all shadow-[6px_6px_0px_0px_white] hover:shadow-[8px_8px_0px_0px_rgba(235,0,0,0.5)]"
-                              style={STYLES.shardBg}
-                            >
-                              RETURN TO BOARD
+                          <>
+                            <button onClick={onWrong} className="bg-[#262626] text-white px-6 py-3 font-display text-sm uppercase tracking-tight border-b-4 border-[#ff6e84] hover:bg-[#ff6e84] hover:text-black transition-colors">
+                              WRONG ({previews.wrong})
                             </button>
-                          ) : (
-                            <>
-                              <button onClick={onWrong} className="bg-[#262626] text-white px-6 py-3 font-display text-sm uppercase tracking-tight border-b-4 border-[#ff6e84] hover:bg-[#ff6e84] hover:text-black transition-colors">
-                                WRONG ({previews.wrong})
-                              </button>
-                              <button onClick={onCorrect} className="bg-[#262626] text-white px-6 py-3 font-display text-sm uppercase tracking-tight border-b-4 border-[#ff8e7d] hover:bg-[#eb0000] hover:text-black transition-colors">
-                                CORRECT (+{previews.correct})
-                              </button>
-                              <button onClick={onPass} className="bg-[#262626] text-white px-6 py-3 font-display text-sm uppercase tracking-tight border-b-4 border-[#757575] hover:bg-white hover:text-black transition-colors">
-                                PASS ({previews.pass})
-                              </button>
-                            </>
-                          )}
+                            <button onClick={onCorrect} className="bg-[#262626] text-white px-6 py-3 font-display text-sm uppercase tracking-tight border-b-4 border-[#ff8e7d] hover:bg-[#eb0000] hover:text-black transition-colors">
+                              CORRECT ({previews.correct})
+                            </button>
+                            <button onClick={onPass} className="bg-[#262626] text-white px-6 py-3 font-display text-sm uppercase tracking-tight border-b-4 border-[#757575] hover:bg-white hover:text-black transition-colors">
+                              {isInSkipChain ? `SKIP (0pts)` : `PASS (${previews.pass})`}
+                            </button>
+                          </>
                         </div>
                       </motion.div>
                     </AnimatePresence>
@@ -336,7 +319,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
             <div className="bg-[#131313] p-4 flex justify-between items-center border border-white/5">
               <span className="font-display text-xs text-white/40 tracking-widest uppercase">TIME REMAINING</span>
               <span className={`font-display text-3xl ${isUrgent ? 'text-[#ff6e84]' : 'text-[#eb0000]'}`}>
-                {timeLimit === 0 ? '∞' : (revealed || skipCount > 0) ? 'LOCKED' : `${timeLeft}s`}
+                {timeLimit === 0 ? '∞' : revealed ? 'LOCKED' : `${timeLeft}s`}
               </span>
             </div>
             <div className="bg-[#131313] p-4 flex justify-between items-center border-l-4 border-[#eb0000]">

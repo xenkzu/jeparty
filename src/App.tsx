@@ -145,7 +145,8 @@ function App() {
           scoringMode: 'normal',
           settings: { difficulty: 'medium', timeLimit: 60, questionsPerCategory: 5, scoringMode: 'normal', uiVersion: 'v2' },
           turnIndex: 0,
-          currentQuestion: screen === 'question' ? { categoryIndex: 0, questionIndex: 0 } : null
+          currentQuestion: screen === 'question' ? { categoryIndex: 0, questionIndex: 0 } : null,
+          skipChain: null
         };
 
         setGameState(dummyGame);
@@ -195,7 +196,8 @@ function App() {
         scoringMode: settings.scoringMode,
         settings,
         turnIndex: 0,
-        currentQuestion: null
+        currentQuestion: null,
+        skipChain: null
       };
 
       setGameState(newGame);
@@ -210,35 +212,191 @@ function App() {
     }
   };
 
+  // Normal question resolution — used for correct/wrong outside skip chain
+  // and for final resolution inside skip chain
+  const resolveQuestion = (
+    categoryIndex: number,
+    questionIndex: number,
+    scoreDelta: number,
+    nextTurnIndex: number
+  ) => {
+    const gs = gameStateRef.current;
+    if (!gs) return;
+    const newPlayers = gs.players.map((p, i) =>
+      i === gs.turnIndex ? { ...p, score: p.score + scoreDelta } : p
+    );
+    const newBoard = gs.board.map((cat, ci) =>
+      ci !== categoryIndex ? cat : {
+        ...cat,
+        questions: cat.questions.map((q, qi) =>
+          qi !== questionIndex ? q : { ...q, status: 'answered' as const }
+        )
+      }
+    );
+    setGameState({
+      ...gs,
+      players: newPlayers,
+      board: newBoard,
+      currentQuestion: null,
+      skipChain: null,
+      turnIndex: nextTurnIndex,
+    });
+    navigateTo('GAME');
+  };
+
+  const updateScoreAndStatus = (categoryIndex: number, questionIndex: number, scoreDelta: number) => {
+    const gs = gameStateRef.current;
+    if (!gs) return;
+    const nextTurn = (gs.turnIndex + 1) % gs.players.length;
+    resolveQuestion(categoryIndex, questionIndex, scoreDelta, nextTurn);
+  };
+
+  // Legacy wrapper for v1 UI
   const handleTurnTransition = (scoreDelta: number, markAsAnswered: boolean = false) => {
     const gs = gameStateRef.current;
     if (!gs || !gs.currentQuestion) return;
     const { categoryIndex, questionIndex } = gs.currentQuestion;
+    if (markAsAnswered) {
+      updateScoreAndStatus(categoryIndex, questionIndex, scoreDelta);
+    } else {
+      const newPlayers = gs.players.map((p, i) =>
+        i === gs.turnIndex ? { ...p, score: p.score + scoreDelta } : p
+      );
+      setGameState({
+        ...gs,
+        players: newPlayers,
+        turnIndex: (gs.turnIndex + 1) % gs.players.length
+      });
+    }
+  };
 
-    const newPlayers = gs.players.map((p, i) =>
-      i === gs.turnIndex ? { ...p, score: p.score + scoreDelta } : p
-    );
+  // Called when active player hits PASS
+  const handlePass = (categoryIndex: number, questionIndex: number) => {
+    const gs = gameStateRef.current;
+    if (!gs) return;
+    const n = gs.players.length;
 
-    const newBoard = markAsAnswered 
-      ? gs.board.map((cat, ci) =>
+    if (!gs.skipChain) {
+      // First pass — Dev1 passes
+      const originalIndex = gs.turnIndex;
+      const nextRecipient = (originalIndex + 1) % n;
+      const penalty = gs.board[categoryIndex].questions[questionIndex].value * 0.5;
+
+      // Deduct 50% from passer
+      const newPlayers = gs.players.map((p, i) =>
+        i === originalIndex ? { ...p, score: p.score - penalty } : p
+      );
+
+      setGameState({
+        ...gs,
+        players: newPlayers,
+        turnIndex: nextRecipient,
+        skipChain: {
+          originalPlayerIndex: originalIndex,
+          originalTurnIndex: originalIndex,
+          passedPlayerIndices: [originalIndex],
+          currentRecipientIndex: nextRecipient,
+        },
+      });
+      // Stay on QUESTION screen — just updated state
+    } else {
+      // Subsequent skip — recipient skips with 0 penalty
+      const chain = gs.skipChain;
+      const newPassed = [...chain.passedPlayerIndices, gs.turnIndex];
+      const nextRecipient = (gs.turnIndex + 1) % n;
+
+      // Check if question has come full circle back to original passer
+      if (nextRecipient === chain.originalPlayerIndex) {
+        // Full circle — auto-reveal, no score change, next turn = player after original
+        const newBoard = gs.board.map((cat, ci) =>
           ci !== categoryIndex ? cat : {
             ...cat,
             questions: cat.questions.map((q, qi) =>
               qi !== questionIndex ? q : { ...q, status: 'answered' as const }
             )
           }
-        )
-      : gs.board;
+        );
+        const nextTurn = (chain.originalPlayerIndex + 1) % n;
+        setGameState({
+          ...gs,
+          board: newBoard,
+          currentQuestion: null,
+          skipChain: null,
+          turnIndex: nextTurn,
+        });
+        navigateTo('GAME');
+      } else {
+        setGameState({
+          ...gs,
+          turnIndex: nextRecipient,
+          skipChain: {
+            ...chain,
+            passedPlayerIndices: newPassed,
+            currentRecipientIndex: nextRecipient,
+          },
+        });
+      }
+    }
+  };
 
-    setGameState({
-      ...gs,
-      players: newPlayers,
-      board: newBoard,
-      currentQuestion: markAsAnswered ? null : gs.currentQuestion,
-      turnIndex: (gs.turnIndex + 1) % gs.players.length
-    });
+  // Called when recipient answers CORRECT during skip chain
+  const handleSkipChainCorrect = (categoryIndex: number, questionIndex: number) => {
+    const gs = gameStateRef.current;
+    if (!gs || !gs.skipChain) return;
+    const qValue = gs.board[categoryIndex].questions[questionIndex].value;
+    const bonus = qValue * 0.5;
+    // Next turn = player after original passer
+    const nextTurn = (gs.skipChain.originalPlayerIndex + 1) % gs.players.length;
+    resolveQuestion(categoryIndex, questionIndex, bonus, nextTurn);
+  };
 
-    if (markAsAnswered) navigateTo('GAME');
+  // Called when recipient answers WRONG during skip chain
+  const handleSkipChainWrong = (categoryIndex: number, questionIndex: number) => {
+    const gs = gameStateRef.current;
+    if (!gs || !gs.skipChain) return;
+    const qValue = gs.board[categoryIndex].questions[questionIndex].value;
+    const penalty = qValue * 0.5;
+    const n = gs.players.length;
+    const chain = gs.skipChain;
+    const nextRecipient = (gs.turnIndex + 1) % n;
+
+    // Deduct 50% from wrong answerer
+    const newPlayers = gs.players.map((p, i) =>
+      i === gs.turnIndex ? { ...p, score: p.score - penalty } : p
+    );
+
+    if (nextRecipient === chain.originalPlayerIndex) {
+      // Full circle after wrong answer — auto-reveal
+      const newBoard = gs.board.map((cat, ci) =>
+        ci !== categoryIndex ? cat : {
+          ...cat,
+          questions: cat.questions.map((q, qi) =>
+            qi !== questionIndex ? q : { ...q, status: 'answered' as const }
+          )
+        }
+      );
+      const nextTurn = (chain.originalPlayerIndex + 1) % n;
+      setGameState({
+        ...gs,
+        players: newPlayers,
+        board: newBoard,
+        currentQuestion: null,
+        skipChain: null,
+        turnIndex: nextTurn,
+      });
+      navigateTo('GAME');
+    } else {
+      setGameState({
+        ...gs,
+        players: newPlayers,
+        turnIndex: nextRecipient,
+        skipChain: {
+          ...chain,
+          passedPlayerIndices: [...chain.passedPlayerIndices, gs.turnIndex],
+          currentRecipientIndex: nextRecipient,
+        },
+      });
+    }
   };
 
   const handleRefreshAudio = async () => {
@@ -280,7 +438,8 @@ function App() {
     const currentQuestion = gs.board[categoryIndex].questions[questionIndex];
     const activePlayer = gs.players[gs.turnIndex];
     const minScore = Math.min(...gs.players.map(p => p.score));
-    const isUnderdog = activePlayer.score === minScore;
+    const isInSkipChain = !!gs.skipChain;
+    const isUnderdog = !isInSkipChain && activePlayer.score === minScore;
     
     return createPortal(
       <AnimatePresence mode="wait">
@@ -337,38 +496,59 @@ function App() {
               />
             ) : (
               <QuestionModal
-                question={{
-                  value: currentQuestion.value,
-                  question: currentQuestion.question,
-                  answer: currentQuestion.answer,
-                  status: currentQuestion.status,
-                  searchTerm: currentQuestion.searchTerm,
-                  searchTermAudio: currentQuestion.searchTermAudio
-                }}
+                question={{ ...currentQuestion }}
                 categoryName={gs.board[categoryIndex].category}
                 activePlayer={activePlayer}
                 isUnderdog={isUnderdog}
                 scoringMode={gs.scoringMode}
-                timeLimit={gs.settings?.timeLimit ?? 0}
+                timeLimit={isInSkipChain ? 0 : (gs.settings?.timeLimit ?? 0)}
+                isInSkipChain={isInSkipChain}
+                skipChainOriginalPlayer={isInSkipChain
+                  ? gs.players[gs.skipChain!.originalPlayerIndex].name
+                  : null}
                 onCorrect={() => {
-                  const multiplier = isUnderdog ? 1.5 : 1;
-                  handleTurnTransition(currentQuestion.value * multiplier, true);
+                  if (isInSkipChain) {
+                    handleSkipChainCorrect(categoryIndex, questionIndex);
+                  } else {
+                    const multiplier = isUnderdog ? 1.5 : 1;
+                    updateScoreAndStatus(categoryIndex, questionIndex, currentQuestion.value * multiplier);
+                  }
                 }}
                 onWrong={() => {
-                  const penalty = gs.scoringMode === 'normal' ? currentQuestion.value : currentQuestion.value * 0.75;
-                  handleTurnTransition(-penalty, true);
+                  if (isInSkipChain) {
+                    handleSkipChainWrong(categoryIndex, questionIndex);
+                  } else {
+                    const penalty = gs.scoringMode === 'normal'
+                      ? currentQuestion.value
+                      : currentQuestion.value * 0.75;
+                    updateScoreAndStatus(categoryIndex, questionIndex, -penalty);
+                  }
                 }}
-                onPass={() => {
-                  handleTurnTransition(0, false);
-                }}
-                onFinalPass={() => {
-                  handleTurnTransition(0, true);
-                }}
-                onSkip={(penalty: number) => {
-                  handleTurnTransition(-penalty, false);
+                onPass={() => handlePass(categoryIndex, questionIndex)}
+                onForceReveal={() => {
+                  // Host force-reveal — mark answered, next turn = player after original passer
+                  const nextTurn = isInSkipChain
+                    ? (gs.skipChain!.originalPlayerIndex + 1) % gs.players.length
+                    : (gs.turnIndex + 1) % gs.players.length;
+                  const newBoard = gs.board.map((cat, ci) =>
+                    ci !== categoryIndex ? cat : {
+                      ...cat,
+                      questions: cat.questions.map((q, qi) =>
+                        qi !== questionIndex ? q : { ...q, status: 'answered' as const }
+                      )
+                    }
+                  );
+                  setGameState({
+                    ...gs,
+                    board: newBoard,
+                    currentQuestion: null,
+                    skipChain: null,
+                    turnIndex: nextTurn,
+                  });
+                  navigateTo('GAME');
                 }}
                 onClose={() => {
-                  setGameState(gs => gs ? { ...gs, currentQuestion: null } : null);
+                  setGameState(gs => gs ? { ...gs, currentQuestion: null, skipChain: null } : null);
                   navigateTo('GAME');
                 }}
                 onRefreshAudio={handleRefreshAudio}
