@@ -43,14 +43,18 @@ export function recordBoardTopics(board: any[]): void {
     const key = normalizeCategory(cat.category);
     // Extract topic = answer field (1-4 words, specific subject)
     const newTopics: string[] = cat.questions
-      .map((q: any) => q.answer as string)
+      .map((q: any) => (q.answer as string)?.trim())
       .filter(Boolean);
 
-    const existing = memory[key];
+    const existing = memory[key]?.topics ?? [];
 
-    // Merge old + new, keep last MAX_GAMES * questionsPerCategory entries
-    const merged = [...(existing?.topics ?? []), ...newTopics];
-    const maxTopics = MAX_GAMES * 7; // 7 = max questions per category
+    // Deduplicate — remove any new topic already in existing, then append
+    const deduped = newTopics.filter(
+      t => !existing.map(e => e.toLowerCase()).includes(t.toLowerCase())
+    );
+
+    const merged = [...existing, ...deduped];
+    const maxTopics = MAX_GAMES * 7;
     memory[key] = {
       topics: merged.slice(-maxTopics),
       updatedAt: now,
@@ -77,6 +81,7 @@ export function getExclusionTopics(categories: string[]): Record<string, string[
     }
   }
 
+  console.debug('[TopicMemory] exclusions built:', JSON.stringify(result));
   return result;
 }
 
