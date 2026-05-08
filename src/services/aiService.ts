@@ -25,10 +25,10 @@ function buildPrompt(categories: string[], settings: GameSettings, exclusions: R
   const audioCategories = categories.filter(c => c.toLowerCase().endsWith(' -a'));
   const promptCategories = categories.map(c => c.replace(/\s*-[v|a]\s*$/i, '').trim());
 
-  const visualCategoryKeys = visualCategories.map(c => 
+  const visualCategoryKeys = visualCategories.map(c =>
     c.replace(/\s*-v\s*$/i, '').trim().toLowerCase()
   );
-  const audioCategoryKeys = audioCategories.map(c => 
+  const audioCategoryKeys = audioCategories.map(c =>
     c.replace(/\s*-a\s*$/i, '').trim().toLowerCase()
   );
 
@@ -40,7 +40,7 @@ function buildPrompt(categories: string[], settings: GameSettings, exclusions: R
       const recent = topics.slice(-25);
       const isVisual = visualCategoryKeys.includes(cat);
       const isAudio = audioCategoryKeys.includes(cat);
-      
+
       if (isVisual) {
         return `- "${cat}": these characters are BANNED [${recent.join(', ')}]\n  You MUST pick entirely different characters not on this list. There are hundreds of anime characters — pick ones you haven't used.`;
       }
@@ -238,7 +238,7 @@ async function fetchBoardFromGroq(categories: string[], settings: GameSettings, 
   if (!text) throw new Error('No content returned from Groq.');
 
   text = text.replace(/```json\n?|```/g, '').trim();
-  
+
   // Robust JSON extraction: Find the first '[' and last ']'
   const firstBracket = text.indexOf('[');
   const lastBracket = text.lastIndexOf(']');
@@ -307,7 +307,7 @@ function generateMockBoard(categories: string[], settings: GameSettings): Board 
     const isVisual = cat.toLowerCase().endsWith(' -v');
     const isAudio = cat.toLowerCase().endsWith(' -a');
     const cleanCat = cat.replace(/\s*-[v|a]\s*$/i, '').trim();
-    
+
     return {
       category: cleanCat,
       questions: values.map((v, i) => ({
