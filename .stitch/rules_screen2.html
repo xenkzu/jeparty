@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JEPARTY // RULES_OF_GAMEPLAY</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;700;900&amp;family=Work+Sans:wght@300;400;600;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#540000",
+                        "inverse-on-surface": "#ae0100",
+                        "on-tertiary-fixed": "#3a0000",
+                        "on-tertiary-fixed-variant": "#7a0100",
+                        "on-secondary-fixed": "#3e4040",
+                        "on-secondary": "#505252",
+                        "surface-container": "#3d0000",
+                        "background": "#270000",
+                        "tertiary": "#ff725e",
+                        "surface-container-lowest": "#000000",
+                        "primary-fixed-dim": "#dddddd",
+                        "outline-variant": "#950100",
+                        "tertiary-fixed-dim": "#ff7c69",
+                        "tertiary-fixed": "#ff9382",
+                        "secondary-fixed-dim": "#d4d4d4",
+                        "on-tertiary": "#4a0000",
+                        "tertiary-container": "#fe0000",
+                        "tertiary-dim": "#eb0000",
+                        "secondary-fixed": "#e2e2e2",
+                        "surface-container-highest": "#540000",
+                        "secondary": "#e2e2e2",
+                        "surface-container-high": "#490000",
+                        "error-container": "#a70138",
+                        "on-surface-variant": "#ff8a78",
+                        "on-surface": "#ffded9",
+                        "primary-dim": "#ebebeb",
+                        "on-tertiary-container": "#000000",
+                        "secondary-dim": "#d4d4d4",
+                        "on-primary-fixed": "#444444",
+                        "on-primary-fixed-variant": "#616161",
+                        "primary-fixed": "#ebebeb",
+                        "on-background": "#ffded9",
+                        "on-primary": "#5f5f5f",
+                        "outline": "#ec0000",
+                        "inverse-surface": "#fff8f6",
+                        "primary-container": "#a0a0a0",
+                        "surface-container-low": "#310000",
+                        "surface-dim": "#270000",
+                        "on-secondary-fixed-variant": "#5a5c5c",
+                        "on-secondary-container": "#d0d0d0",
+                        "on-error": "#490013",
+                        "on-error-container": "#ffb2b9",
+                        "error-dim": "#d73357",
+                        "error": "#ff6e84",
+                        "surface-bright": "#600000",
+                        "primary": "#f9f9f9",
+                        "surface-tint": "#f9f9f9",
+                        "surface": "#270000",
+                        "secondary-container": "#454747",
+                        "on-primary-container": "#232323",
+                        "inverse-primary": "#5f5f5f"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk"],
+                        "display": ["Space Grotesk"],
+                        "body": ["Work Sans"],
+                        "label": ["Work Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48; }
+        .slashed-r { clip-path: polygon(0 0, 95% 0, 100% 100%, 0% 100%); }
+        .slashed-l { clip-path: polygon(5% 0, 100% 0, 100% 100%, 0% 100%); }
+        .slashed-both { clip-path: polygon(5% 0, 95% 0, 100% 100%, 0% 100%); }
+        body { background-color: #270000; color: #ffded9; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #270000; }
+        ::-webkit-scrollbar-thumb { background: #fe0000; border-radius: 0px; }
+    </style>
+</head>
+<body class="font-body selection:bg-tertiary-container selection:text-on-tertiary-container">
+<!-- TopAppBar -->
+<nav class="sticky top-0 w-full z-50 flex justify-between items-center px-8 py-6 max-w-full bg-surface-bright/80 backdrop-blur-2xl">
+<div class="font-headline font-black text-tertiary-container italic tracking-tighter text-3xl uppercase">
+            JEPARTY
+        </div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="font-label font-bold uppercase tracking-widest text-[10px] text-on-surface-variant hover:text-tertiary transition-colors" href="#">ARENA</a>
+<a class="font-label font-bold uppercase tracking-widest text-[10px] text-tertiary-container border-b-4 border-tertiary-container pb-1" href="#">INTEL</a>
+<a class="font-label font-bold uppercase tracking-widest text-[10px] text-on-surface-variant hover:text-tertiary transition-colors" href="#">VAULT</a>
+</div>
+<button class="bg-tertiary-container text-on-tertiary-container px-6 py-2 font-headline font-bold uppercase tracking-tight scale-95 active:scale-90 transition-transform">
+            RETURN TO GAME
+        </button>
+</nav>
+<main class="max-w-7xl mx-auto px-6 md:px-12 pb-24">
+<!-- Hero Section -->
+<section class="py-24 md:py-32 flex flex-col gap-8">
+<div class="flex flex-col gap-2">
+<span class="text-tertiary font-label font-bold uppercase tracking-[0.4em] text-sm">SYSTEM_OVERVIEW_V.4.02</span>
+<h1 class="font-headline font-black text-7xl md:text-9xl leading-none uppercase tracking-tighter text-primary">
+                    OFFICIAL RULES<br/>&amp; GAME GUIDE
+                </h1>
+</div>
+<div class="max-w-3xl bg-surface-container-high p-8 border-l-[12px] border-tertiary-container">
+<p class="text-xl md:text-2xl font-light leading-relaxed text-on-surface italic">
+                    JEPARTY operates on a single-machine, host-controlled architecture. The Host manages all scoring, reveals, and game progression from a central terminal while players compete in the physical or digital arena.
+                </p>
+</div>
+</section>
+<!-- Bento Grid Content -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Section 1: Setup -->
+<div class="md:col-span-7 bg-surface-container-lowest p-10 flex flex-col gap-6 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
+<span class="material-symbols-outlined text-9xl">settings_input_component</span>
+</div>
+<h2 class="font-headline font-bold text-4xl uppercase tracking-tighter text-tertiary-container">01 // SETUP</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div>
+<h3 class="text-on-surface font-bold uppercase text-xs tracking-widest mb-2 text-tertiary">CAPACITY</h3>
+<p class="text-2xl font-headline font-bold">2-8 OPERATIVES</p>
+<p class="text-sm text-on-surface-variant mt-2 leading-relaxed">Optimal engagement achieved with 4+ players. Supports team-based tactical play.</p>
+</div>
+<div>
+<h3 class="text-on-surface font-bold uppercase text-xs tracking-widest mb-2 text-tertiary">ARCHITECTURE</h3>
+<p class="text-2xl font-headline font-bold">5 CATEGORIES</p>
+<p class="text-sm text-on-surface-variant mt-2 leading-relaxed">Each category features a progressive difficulty curve from 100 to 700 units.</p>
+</div>
+</div>
+<div class="mt-4 p-6 bg-surface-variant/30 border-t-2 border-tertiary">
+<p class="font-label text-xs uppercase tracking-widest text-primary mb-2">Technical Suffixes</p>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<span class="bg-tertiary-container text-on-tertiary-container font-black px-2 py-0.5">-V</span>
+<span class="text-xs">VISUAL INTEL</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="bg-tertiary-container text-on-tertiary-container font-black px-2 py-0.5">-A</span>
+<span class="text-xs">AUDIO STREAM</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 2: The Board -->
+<div class="md:col-span-5 bg-tertiary-container text-on-tertiary-container p-10 flex flex-col justify-between">
+<div>
+<h2 class="font-headline font-black text-4xl uppercase tracking-tighter mb-4">02 // THE BOARD</h2>
+<p class="font-medium text-lg leading-snug">A 5xN grid of high-stakes data points. Once selected, a cell is decrypted and locked into the skip chain protocols.</p>
+</div>
+<div class="grid grid-cols-5 gap-1 mt-8 h-32 opacity-80">
+<div class="bg-on-tertiary-container/20"></div>
+<div class="bg-on-tertiary-container/40"></div>
+<div class="bg-on-tertiary-container/10"></div>
+<div class="bg-on-tertiary-container/60"></div>
+<div class="bg-on-tertiary-container/30"></div>
+<div class="bg-on-tertiary-container/50"></div>
+<div class="bg-on-tertiary-container/20"></div>
+<div class="bg-on-tertiary-container/80"></div>
+<div class="bg-on-tertiary-container/40"></div>
+<div class="bg-on-tertiary-container/10"></div>
+</div>
+</div>
+<!-- Section 3: Standard Scoring -->
+<div class="md:col-span-12 bg-surface-container p-10 flex flex-col md:flex-row gap-12 items-center">
+<div class="md:w-1/3">
+<h2 class="font-headline font-bold text-5xl uppercase tracking-tighter text-tertiary-container leading-none">03 // SCORING PROTOCOLS</h2>
+</div>
+<div class="md:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="flex gap-4 items-start">
+<span class="material-symbols-outlined text-tertiary text-4xl">add_circle</span>
+<div>
+<p class="font-headline font-bold text-xl uppercase">CORRECT DECRYPTION</p>
+<p class="text-on-surface-variant text-sm">+100% Face Value points. Current active player retains terminal control.</p>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<span class="material-symbols-outlined text-error text-4xl">do_not_disturb_on</span>
+<div>
+<p class="font-headline font-bold text-xl uppercase">CORRUPT INPUT</p>
+<p class="text-on-surface-variant text-sm">-100% Face Value points. Immediate terminal lockout applied.</p>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<span class="material-symbols-outlined text-on-surface text-4xl">forward</span>
+<div>
+<p class="font-headline font-bold text-xl uppercase">PASSIVE BYPASS</p>
+<p class="text-on-surface-variant text-sm">-50% Face Value penalty. Intel moves to the Skip Chain.</p>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<span class="material-symbols-outlined text-primary text-4xl">trending_up</span>
+<div>
+<p class="font-headline font-bold text-xl uppercase">UNDERDOG BOOST</p>
+<p class="text-on-surface-variant text-sm">Players in the bottom 25% rank receive a 1.5x Multiplier on correct hits.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 4: Skip Chain -->
+<div class="md:col-span-6 bg-surface-container-high p-10 relative overflow-hidden">
+<div class="flex flex-col gap-6 relative z-10">
+<h2 class="font-headline font-bold text-4xl uppercase tracking-tighter text-tertiary-container">04 // SKIP CHAIN</h2>
+<p class="text-on-surface leading-relaxed">If the primary player fails or bypasses, the intel cascades sequentially through all remaining operatives.</p>
+<ul class="space-y-4">
+<li class="flex items-center gap-3">
+<div class="w-2 h-2 bg-tertiary"></div>
+<span class="text-sm font-bold uppercase tracking-widest">RECIPIENT CORRECT: +50% VAL</span>
+</li>
+<li class="flex items-center gap-3">
+<div class="w-2 h-2 bg-error"></div>
+<span class="text-sm font-bold uppercase tracking-widest">RECIPIENT WRONG: -50% VAL</span>
+</li>
+<li class="flex items-center gap-3">
+<div class="w-2 h-2 bg-on-surface-variant"></div>
+<span class="text-sm font-bold uppercase tracking-widest">RECIPIENT SKIP: 0 PENALTY</span>
+</li>
+</ul>
+</div>
+<div class="absolute -bottom-10 -right-10 opacity-5">
+<span class="material-symbols-outlined text-[300px]">hub</span>
+</div>
+</div>
+<!-- Section 5: Host Controls -->
+<div class="md:col-span-6 bg-surface-container-lowest p-0 overflow-hidden flex flex-col">
+<div class="p-10 bg-surface-variant">
+<h2 class="font-headline font-bold text-4xl uppercase tracking-tighter text-primary">05 // HOST_CMD_LIST</h2>
+</div>
+<div class="flex-grow p-6">
+<table class="w-full text-left font-label text-sm uppercase tracking-wider">
+<thead class="text-tertiary-container border-b border-outline-variant">
+<tr>
+<th class="py-4 font-black">COMMAND</th>
+<th class="py-4 font-black">ACTION</th>
+</tr>
+</thead>
+<tbody class="text-on-surface-variant divide-y divide-outline-variant/20">
+<tr>
+<td class="py-3 font-bold text-primary">CORRECT</td>
+<td class="py-3 italic">Award full point value to active cell</td>
+</tr>
+<tr>
+<td class="py-3 font-bold text-primary">WRONG</td>
+<td class="py-3 italic">Deduct full points / Trigger lockout</td>
+</tr>
+<tr>
+<td class="py-3 font-bold text-primary">SKIP</td>
+<td class="py-3 italic">Trigger sequential chain pass</td>
+</tr>
+<tr>
+<td class="py-3 font-bold text-primary">REVEAL</td>
+<td class="py-3 italic">Show encrypted data contents</td>
+</tr>
+<tr>
+<td class="py-3 font-bold text-primary text-error">TERMINATE</td>
+<td class="py-3 italic">Immediate session halt &amp; purge</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Section 6: Quick Ref -->
+<div class="md:col-span-12 bg-on-background p-12 flex flex-col items-center gap-10 slashed-both">
+<h2 class="font-headline font-black text-6xl text-on-tertiary-container uppercase tracking-tighter">QUICK_REF_SUMMARY</h2>
+<div class="flex flex-wrap justify-center gap-8 md:gap-16">
+<div class="text-center">
+<span class="block font-headline font-black text-5xl text-tertiary-container">+100%</span>
+<span class="font-label text-on-tertiary-container font-black uppercase text-xs tracking-widest">CORRECT</span>
+</div>
+<div class="text-center">
+<span class="block font-headline font-black text-5xl text-on-tertiary-container">-100%</span>
+<span class="font-label text-on-tertiary-container font-black uppercase text-xs tracking-widest">WRONG</span>
+</div>
+<div class="text-center">
+<span class="block font-headline font-black text-5xl text-tertiary-container">-50%</span>
+<span class="font-label text-on-tertiary-container font-black uppercase text-xs tracking-widest">PASS</span>
+</div>
+<div class="text-center">
+<span class="block font-headline font-black text-5xl text-on-tertiary-container">+50%</span>
+<span class="font-label text-on-tertiary-container font-black uppercase text-xs tracking-widest">CHAIN_WIN</span>
+</div>
+</div>
+</div>
+</div>
+<!-- System Image Section -->
+<section class="mt-24 h-96 w-full relative overflow-hidden grayscale brightness-50 hover:grayscale-0 transition-all duration-700">
+<img alt="System Hub" class="w-full h-full object-cover" data-alt="A high-tech industrial server room illuminated by intense, glowing red neon lines and brutalist architectural details. The aesthetic is dark, raw, and technological, featuring massive hardware racks and exposed cables. The lighting is low-key with high-contrast red highlights reflecting off metallic surfaces, creating an aggressive underground atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJC_LQz7EVEVSgb4OAhNXiuBnJ9scF8Gvniui0OSwj7Vh8LYE59ZAHYcSXCAEpufVKYzHrU-jopHwjmjoDfqZLSahWPTQrYKcT0xp0kDuv9jYi6flrpJsOphWOgxDvR2QCDx9UORr79Xd1T7WugLn7paSYFVFBL4FjxZhCC16ZYdvtcVMukOHo_LLgJbd4-Xm9bpKaMoxLWsgnqitIj6a2fEgIePetFDAqytvfZDyaSfouwcRZW4YJW98YgLIcDhHX9rYBGpSgVxpy"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent"></div>
+<div class="absolute bottom-12 left-12">
+<p class="font-headline font-bold text-4xl text-primary tracking-tighter">DATA PURGE: IMMINENT</p>
+<p class="text-tertiary font-label uppercase tracking-widest text-xs">CONNECTION STABLE // ENCRYPTION ACTIVE</p>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full px-12 py-16 flex flex-col md:flex-row justify-between items-center gap-8 border-t-0 bg-surface-container-lowest">
+<div class="flex flex-col gap-2">
+<div class="font-headline font-black text-primary text-2xl tracking-tighter uppercase">JEPARTY</div>
+<p class="font-label uppercase tracking-[0.2em] text-[10px] text-on-surface-variant max-w-sm">
+                JEPARTY_SYSTEM_V.4.02 — Host-controlled. AI-generated. No two games alike.
+            </p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="font-label uppercase tracking-[0.2em] text-[10px] text-on-secondary-fixed-variant hover:text-tertiary transition-opacity" href="#">SYSTEM_STATUS</a>
+<a class="font-label uppercase tracking-[0.2em] text-[10px] text-on-secondary-fixed-variant hover:text-tertiary transition-opacity" href="#">INTEL_TERMS</a>
+<a class="font-label uppercase tracking-[0.2em] text-[10px] text-on-secondary-fixed-variant hover:text-tertiary transition-opacity" href="#">ENCRYPT_PRIVACY</a>
+</div>
+<div class="font-label uppercase tracking-[0.2em] text-[10px] text-on-surface-variant opacity-80">
+            ©2024 JEPARTY_UNDERGROUND_OPS // NO_BORDERS_NO_PRISONERS
+        </div>
+</footer>
+<!-- Bottom Nav (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-stretch h-20 bg-surface-container-lowest">
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-full h-full py-4 hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">sports_esports</span>
+<span class="font-label font-bold uppercase tracking-widest text-[10px]">BATTLE</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-full h-full py-4 hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">leaderboard</span>
+<span class="font-label font-bold uppercase tracking-widest text-[10px]">RANK</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-full h-full py-4 hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">lock</span>
+<span class="font-label font-bold uppercase tracking-widest text-[10px]">VAULT</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-tertiary-container text-on-tertiary-container rounded-none w-full h-full py-4 transition-all" href="#">
+<span class="material-symbols-outlined">terminal</span>
+<span class="font-label font-bold uppercase tracking-widest text-[10px]">INTEL</span>
+</a>
+</nav>
+</body></html>
