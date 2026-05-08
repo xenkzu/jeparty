@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from './components/ui/Logo';
@@ -60,18 +60,27 @@ const FooterVisualizer = () => {
   );
 };
 
-function OptionButton({ label, sub, selected, onClick }: { label: string; sub?: string; selected: boolean; onClick: () => void }) {
+function OptionButton({ label, sub, selected, onClick, groupId }: { label: string; sub?: string; selected: boolean; onClick: () => void; groupId: string }) {
   return (
-    <button
+    <motion.button
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`flex-1 py-3 px-4 text-left border transition-colors ${selected
-        ? 'bg-tertiary-container text-on-tertiary-container border-tertiary-container'
-        : 'bg-[#1A1A1A] text-white/60 border-[#333333] hover:border-white/30'
+      className={`relative flex-1 py-3 px-4 text-left transition-all duration-200 border ${selected
+        ? 'text-tertiary-container border-tertiary-container'
+        : 'bg-[#111111] text-white/50 border-[#333333] hover:border-white/30 hover:bg-[#1a1a1a] hover:text-white/80'
         }`}
     >
-      <span className="font-display font-bold text-sm uppercase tracking-widest block">{label}</span>
-      {sub && <span className="font-body text-[0.6rem] tracking-widest opacity-60 mt-0.5 block">{sub}</span>}
-    </button>
+      {selected && (
+        <motion.div
+          layoutId={`settings-slider-${groupId}`}
+          className="absolute inset-0 bg-tertiary-container/10 shadow-[inset_4px_0_0_0_#eb0000] pointer-events-none"
+          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+        />
+      )}
+      <span className="relative z-10 font-display font-bold text-sm uppercase tracking-widest block leading-tight">{label}</span>
+      {sub && <span className="relative z-10 font-body text-xs tracking-[0.1em] opacity-60 mt-1 block">{sub}</span>}
+    </motion.button>
   );
 }
 
@@ -89,6 +98,7 @@ function App() {
   if (gameState) console.debug("GAME_STREAM_INITIALIZED:", gameState.players.length, "players active");
 
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState<{ players: string[], categories: string[] } | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
   // Settings state — lives in App so cog button can open it from anywhere
@@ -181,6 +191,7 @@ function App() {
    * Maps players, categories and scoring mode into a full Game state.
    */
   const handleStart = async (players: string[], categories: string[], settings: GameSettings) => {
+    setLoadingData({ players, categories });
     setIsLoading(true);
     setLoadingError(null);
 
@@ -564,13 +575,69 @@ function App() {
   const renderScreen = () => {
     // Logic Wiring: Fullscreen loading state using existing aesthetics
     if (isLoading) {
+      const qCount = settings.questionsPerCategory || 5;
+      const cats = loadingData?.categories || ['CATEGORY 1', 'CATEGORY 2', 'CATEGORY 3', 'CATEGORY 4', 'CATEGORY 5'];
+      const players = loadingData?.players || ['PLAYER 1', 'PLAYER 2', 'PLAYER 3'];
+
       return (
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 animate-pulse bg-surface-container-lowest">
-          <div className="w-16 h-1 bg-tertiary-container shadow-[0_0_15px_rgba(254,0,0,0.5)]"></div>
-          <h2 className="font-display text-4xl md:text-6xl text-tertiary-container uppercase tracking-tighter text-center animate-blink-cursor">
-            GENERATING BOARD...
-          </h2>
-          <div className="w-16 h-1 bg-tertiary-container shadow-[0_0_15px_rgba(254,0,0,0.5)]"></div>
+        <div className="flex-1 flex flex-col bg-[var(--color-background)] p-6 overflow-hidden">
+          {/* Skeleton Scoreboard */}
+          <section className="flex flex-wrap gap-4 mb-10 shrink-0 opacity-50">
+            {players.map((_, idx) => (
+              <div
+                key={idx}
+                style={{ clipPath: 'polygon(0 0, 100% 0, 100% 70%, 90% 100%, 0 100%)' }}
+                className="px-6 py-4 flex items-center gap-8 border-l-[6px] bg-[var(--color-surface-container-high)] border-[var(--color-primary-dim)]/40 w-56 animate-pulse"
+              >
+                <div className="flex flex-col gap-3 w-full">
+                  <div className="h-2 w-12 bg-white/20 rounded"></div>
+                  <div className="h-5 w-24 bg-white/20 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </section>
+
+          {/* Skeleton Board */}
+          <div className="grid grid-cols-5 gap-x-10 gap-y-5 flex-1 relative" style={{ gridTemplateRows: `repeat(${qCount + 1}, minmax(${qCount > 5 ? '80px' : '100px'}, 1fr))` }}>
+            
+            {/* Shimmer Overlay */}
+            <div className="absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center">
+              <div className="bg-black/60 absolute inset-0 backdrop-blur-sm"></div>
+              <h2 className="font-display text-4xl md:text-6xl text-[var(--color-primary-dim)] uppercase tracking-tighter text-center animate-blink-cursor relative z-20 drop-shadow-2xl flex items-center gap-4">
+                <span className="material-symbols-outlined text-5xl md:text-7xl opacity-80" style={{ animation: 'spin 4s linear infinite' }}>memory</span>
+                GENERATING BOARD...
+              </h2>
+            </div>
+
+            {/* Category Headers */}
+            {cats.map((_, i) => (
+              <div
+                key={i}
+                style={{ clipPath: i % 2 === 0 ? 'polygon(2% 2%, 98% 0, 100% 98%, 0 100%)' : 'polygon(0 5%, 100% 0, 95% 100%, 5% 95%)' }}
+                className="row-span-1 bg-[var(--color-surface-container-highest)] p-2 flex items-center justify-center border-b-2 border-[var(--color-primary-dim)]/20 animate-pulse"
+              >
+                 <div className="h-3 w-3/4 bg-white/20 rounded"></div>
+              </div>
+            ))}
+
+            {/* Question Cells */}
+            {Array.from({ length: qCount }).map((_, rowIdx) => (
+              <React.Fragment key={rowIdx}>
+                {cats.map((_, colIdx) => {
+                  const totalIdx = rowIdx * 5 + colIdx;
+                  return (
+                    <div
+                      key={`${colIdx}-${rowIdx}`}
+                      style={{ clipPath: totalIdx % 2 === 0 ? 'polygon(2% 2%, 98% 0, 100% 98%, 0 100%)' : 'polygon(0 5%, 100% 0, 95% 100%, 5% 95%)' }}
+                      className="h-full bg-[var(--color-surface-container-low)] flex flex-col items-center justify-center animate-pulse"
+                    >
+                      <div className="h-6 w-16 bg-[var(--color-primary-dim)]/20 rounded"></div>
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       );
     }
@@ -704,77 +771,96 @@ function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setSettingsOpen(false)}
-                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
               />
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 30 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 400 }}
-                className="relative bg-[#0D0D0D] border-t-2 border-tertiary-container w-full max-w-lg p-8 flex flex-col gap-8 shadow-[0_0_50px_rgba(254,0,0,0.2)]"
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={{
+                  hidden: { opacity: 0, scale: 0.98, y: 15 },
+                  visible: { 
+                    opacity: 1, scale: 1, y: 0, 
+                    transition: { type: 'spring', damping: 30, stiffness: 400, staggerChildren: 0.03, delayChildren: 0.05 } 
+                  },
+                  exit: { opacity: 0, scale: 0.98, y: 15, transition: { duration: 0.15 } }
+                }}
+                className="relative bg-[#0D0D0D] border-t-2 border-tertiary-container w-full max-w-lg p-8 flex flex-col gap-8"
               >
-                <div className="absolute top-0 left-0 w-16 h-0.5 bg-tertiary-container shadow-[0_0_10px_rgba(254,0,0,0.5)]"></div>
-                <div className="absolute bottom-0 right-0 w-24 h-0.5 bg-tertiary-container shadow-[0_0_10px_rgba(254,0,0,0.5)]"></div>
+                {/* Decorative Elements */}
+                <div className="absolute top-0 left-0 w-20 h-0.5 bg-tertiary-container shadow-[0_0_10px_rgba(254,0,0,0.5)]"></div>
+                <div className="absolute bottom-0 right-0 w-32 h-0.5 bg-tertiary-container shadow-[0_0_10px_rgba(254,0,0,0.5)]"></div>
 
-                <h2 className="font-display font-bold text-3xl tracking-tight text-white uppercase">SETTINGS_STREAM</h2>
+                <motion.div variants={{ hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0 } }}>
+                  <h2 className="font-display font-black text-3xl tracking-tight text-white uppercase flex items-center gap-4">
+                    <span className="material-symbols-outlined text-tertiary-container text-3xl">settings_system_daydream</span>
+                    SYSTEM_CONFIG
+                  </h2>
+                </motion.div>
 
-                <div className="flex flex-col gap-3">
-                  <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Difficulty</span>
-                  <div className="flex gap-2">
-                    <OptionButton label="EASY" sub="Common knowledge" selected={pendingSettings.difficulty === 'easy'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'easy' }))} />
-                    <OptionButton label="MEDIUM" sub="Topic expertise" selected={pendingSettings.difficulty === 'medium'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'medium' }))} />
-                    <OptionButton label="HARD" sub="Expert level" selected={pendingSettings.difficulty === 'hard'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'hard' }))} />
-                  </div>
+                <div className="flex flex-col gap-5 w-full">
+                  <motion.div variants={{ hidden: { opacity: 0, y: 5 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Difficulty</span>
+                    <div className="flex gap-3">
+                      <OptionButton groupId="difficulty" label="EASY" sub="Common" selected={pendingSettings.difficulty === 'easy'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'easy' }))} />
+                      <OptionButton groupId="difficulty" label="MEDIUM" sub="Expertise" selected={pendingSettings.difficulty === 'medium'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'medium' }))} />
+                      <OptionButton groupId="difficulty" label="HARD" sub="Expert" selected={pendingSettings.difficulty === 'hard'} onClick={() => setPendingSettings(s => ({ ...s, difficulty: 'hard' }))} />
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={{ hidden: { opacity: 0, y: 5 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Time Limit</span>
+                    <div className="flex gap-3">
+                      <OptionButton groupId="timer" label="30S" selected={pendingSettings.timeLimit === 30} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 30 }))} />
+                      <OptionButton groupId="timer" label="60S" selected={pendingSettings.timeLimit === 60} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 60 }))} />
+                      <OptionButton groupId="timer" label="INF" selected={pendingSettings.timeLimit === 0} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 0 }))} />
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={{ hidden: { opacity: 0, y: 5 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Questions Per Category</span>
+                    <div className="flex gap-3">
+                      <OptionButton groupId="questions" label="3" selected={pendingSettings.questionsPerCategory === 3} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 3 }))} />
+                      <OptionButton groupId="questions" label="5" selected={pendingSettings.questionsPerCategory === 5} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 5 }))} />
+                      <OptionButton groupId="questions" label="7" selected={pendingSettings.questionsPerCategory === 7} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 7 }))} />
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={{ hidden: { opacity: 0, y: 5 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Scoring Mode</span>
+                    <div className="flex gap-3">
+                      <OptionButton groupId="scoring" label="STANDARD" sub="Persistent" selected={pendingSettings.scoringMode === 'normal'} onClick={() => setPendingSettings(s => ({ ...s, scoringMode: 'normal' }))} />
+                      <OptionButton groupId="scoring" label="ADVANCED" sub="Permadeath" selected={pendingSettings.scoringMode === 'advanced'} onClick={() => setPendingSettings(s => ({ ...s, scoringMode: 'advanced' }))} />
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={{ hidden: { opacity: 0, y: 5 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-3">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.2em] text-[#666666]">UI Version</span>
+                    <div className="flex gap-3">
+                      <OptionButton groupId="ui" label="V1_CLASSIC" sub="Cyberpunk" selected={pendingSettings.uiVersion === 'v1'} onClick={() => setPendingSettings(s => ({ ...s, uiVersion: 'v1' }))} />
+                      <OptionButton groupId="ui" label="V2_MODERN" sub="Aesthetic" selected={pendingSettings.uiVersion === 'v2'} onClick={() => setPendingSettings(s => ({ ...s, uiVersion: 'v2' }))} />
+                    </div>
+                  </motion.div>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Time Limit</span>
-                  <div className="flex gap-2">
-                    <OptionButton label="30S" selected={pendingSettings.timeLimit === 30} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 30 }))} />
-                    <OptionButton label="60S" selected={pendingSettings.timeLimit === 60} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 60 }))} />
-                    <OptionButton label="UNLIMITED" selected={pendingSettings.timeLimit === 0} onClick={() => setPendingSettings(s => ({ ...s, timeLimit: 0 }))} />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Questions Per Category</span>
-                  <div className="flex gap-2">
-                    <OptionButton label="3" selected={pendingSettings.questionsPerCategory === 3} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 3 }))} />
-                    <OptionButton label="5" selected={pendingSettings.questionsPerCategory === 5} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 5 }))} />
-                    <OptionButton label="7" selected={pendingSettings.questionsPerCategory === 7} onClick={() => setPendingSettings(s => ({ ...s, questionsPerCategory: 7 }))} />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">Scoring Mode</span>
-                  <div className="flex gap-2">
-                    <OptionButton label="STANDARD" sub="Scores persist" selected={pendingSettings.scoringMode === 'normal'} onClick={() => setPendingSettings(s => ({ ...s, scoringMode: 'normal' }))} />
-                    <OptionButton label="ADVANCED" sub="Permanent death" selected={pendingSettings.scoringMode === 'advanced'} onClick={() => setPendingSettings(s => ({ ...s, scoringMode: 'advanced' }))} />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <span className="text-[0.65rem] font-display font-bold uppercase tracking-[0.2em] text-[#666666]">System Version</span>
-                  <div className="flex gap-2">
-                    <OptionButton label="V1_CLASSIC" sub="Cyberpunk v1" selected={pendingSettings.uiVersion === 'v1'} onClick={() => setPendingSettings(s => ({ ...s, uiVersion: 'v1' }))} />
-                    <OptionButton label="V2_MODERN" sub="Aesthetic v2" selected={pendingSettings.uiVersion === 'v2'} onClick={() => setPendingSettings(s => ({ ...s, uiVersion: 'v2' }))} />
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
+                <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="flex gap-4 mt-2">
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setSettingsOpen(false)}
-                    className="flex-none px-6 py-4 border border-[#333333] text-white/40 font-display font-bold text-sm tracking-widest uppercase hover:border-white/30 transition-colors"
+                    className="flex-none px-8 py-4 border border-[#333333] text-white/40 font-display font-bold text-sm tracking-widest uppercase hover:border-white/30 hover:text-white transition-colors"
                   >
                     ABORT
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => { setSettings(pendingSettings); setSettingsOpen(false); }}
-                    className="flex-1 bg-tertiary-container text-black font-display font-bold text-sm tracking-widest uppercase py-4 hover:bg-white transition-colors [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)]"
+                    className="flex-1 bg-tertiary-container hover:bg-white text-black font-display font-bold text-sm tracking-widest uppercase py-4 transition-colors [clip-path:polygon(0_0,100%_0,95%_100%,0%_100%)] flex items-center justify-center gap-2"
                   >
                     SAVE_CONFIG
-                  </button>
-                </div>
+                  </motion.button>
+                </motion.div>
               </motion.div>
             </div>
           )}
