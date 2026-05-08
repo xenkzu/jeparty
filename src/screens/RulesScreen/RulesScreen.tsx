@@ -1,195 +1,388 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { PageTransition } from '../../components/ui/PageTransition';
+import Title from '../../components/ui/Title';
 
-const RulesScreen: React.FC = () => {
-  const STYLES = {
-    shard: { clipPath: 'polygon(0 0, 98% 0, 100% 20%, 100% 100%, 2% 100%, 0% 80%)' },
-    ghostGrid: { backgroundImage: 'radial-gradient(circle, rgba(235,0,0,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px' }
-  };
+import { motion } from 'framer-motion';
 
-  const sections = [
-    {
-      title: "CORE_LOOP",
-      subtitle: "SEQUENTIAL_OPERATIONS",
-      rules: [
-        { label: "INITIATION", desc: "Board control starts with the last successful player. They choose category & value." },
-        { label: "SELECTION", desc: "Tile activation locks the board. Full-screen visual/audio focus initiated." },
-        { label: "ANSWERING", desc: "Open protocol. Any player can buzz. Moderator validates via system portal." },
-        { label: "RESOLUTION", desc: "CORRECT = +Value & Control. INCORRECT = -Value & Transition." },
-        { label: "SKIPPING", desc: "Moderator reveal. 0pt delta. Control persists with active player." }
-      ]
-    },
-    {
-      title: "SCORING_MATRIX",
-      subtitle: "CALIBRATION_LOGIC",
-      rules: [
-        { label: "POSITIVE_VALIDATION", desc: "User receives +100% of tile value. Score updated in real-time." },
-        { label: "NEGATIVE_VALIDATION", desc: "User receives -100% of tile value. No partial deductions." }
-      ]
-    },
-    {
-      title: "SYSTEM_OVERRIDES",
-      subtitle: "MODERATOR_TERMINAL",
-      rules: [
-        { label: "MANUAL_ADJUST", desc: "Direct override via [+] and [-] triggers in the question dashboard." },
-        { label: "VISUAL_RELOAD", desc: "Cycle image assets if metadata is corrupt or unclear. Same answer." },
-        { label: "AUDIO_REGEN", desc: "Full re-generation of question/answer pair if stream is dead." }
-      ]
-    }
-  ];
+interface RulesScreenProps {
+}
+
+// Replicate Tech Elements from Setup
+const CyberpunkBackground = () => {
+  const dots = Array.from({ length: 80 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    delay: Math.random() * 4,
+    duration: 2 + Math.random() * 3,
+  }));
+
+  const scanLines = Array.from({ length: 3 }, (_, i) => ({
+    id: i,
+    top: 20 + i * 30,
+    duration: 10 + i * 5,
+    delay: i * 2,
+  }));
 
   return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
+      {dots.map(dot => (
+        <motion.div
+          key={dot.id}
+          className="absolute w-px h-px bg-tertiary-container rounded-full"
+          style={{ left: `${dot.x}%`, top: `${dot.y}%` }}
+          animate={{ opacity: [0, 0.4, 0] }}
+          transition={{ duration: dot.duration, repeat: Infinity, delay: dot.delay, ease: 'easeInOut' }}
+        />
+      ))}
+      {scanLines.map(line => (
+        <motion.div
+          key={line.id}
+          className="absolute left-0 right-0 h-px"
+          style={{
+            top: `${line.top}%`,
+            background: 'linear-gradient(to right, transparent, rgba(254,0,0,0.2) 30%, rgba(254,0,0,0.2) 70%, transparent)',
+          }}
+          animate={{ opacity: [0, 1, 0], scaleX: [0.3, 1, 0.3] }}
+          transition={{ duration: line.duration, repeat: Infinity, delay: line.delay, ease: 'easeInOut' }}
+        />
+      ))}
+    </div>
+  );
+};
+
+const TechBracket = ({ className, position }: { className?: string; position: 'tl' | 'tr' | 'bl' | 'br' }) => {
+  const rotation = { tl: '0deg', tr: '90deg', br: '180deg', bl: '270deg' }[position];
+  return (
+    <div className={`absolute w-6 h-6 ${className}`} style={{ transform: `rotate(${rotation})` }}>
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-tertiary-container/40" />
+      <div className="absolute top-0 left-0 w-[1px] h-full bg-tertiary-container/40" />
+    </div>
+  );
+};
+
+const RulesScreen: React.FC<RulesScreenProps> = () => {
+  return (
     <PageTransition>
-      <div className="min-h-screen w-full bg-[#0A0A0A] flex flex-col lg:flex-row relative overflow-hidden font-body text-white">
+      <div 
+        className="font-body selection:bg-tertiary-container selection:text-on-tertiary-container min-h-screen transition-colors duration-300"
+        style={{ 
+          backgroundColor: 'var(--rules-bg-color, #000000)',
+          color: 'var(--on-surface, #FFFFFF)',
+          fontSize: 'var(--rules-body-size, 14px)',
+          lineHeight: 'var(--rules-body-line-height, 1.4)',
+          letterSpacing: 'var(--rules-letter-spacing, -0.05em)',
+          transitionDuration: 'var(--rules-transition-speed, 300ms)'
+        } as any}
+      >
+        <CyberpunkBackground />
         
-        {/* Background Layer */}
-        <div className="absolute inset-0 pointer-events-none z-0">
-          <div className="absolute inset-0 opacity-20" style={STYLES.ghostGrid}></div>
-          <div className="absolute -bottom-20 -right-20 text-[30vw] font-display font-black text-white/5 italic uppercase select-none leading-none tracking-tighter">
-            RIOT
-          </div>
+        {/* CRT Scanline Effect */}
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden opacity-[0.03]">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
         </div>
 
-        {/* Left Metadata Gutter - Removed Width as requested (w-0) */}
-        <div className="hidden lg:flex w-0 border-r border-white/10 flex-col justify-between py-12 items-center relative z-20 shrink-0 overflow-hidden" />
 
-        {/* Main Content Area */}
-        <main className="flex-1 relative z-10 flex flex-col">
-          {/* Hero Header - Adjusted based on Debugger Values */}
-          <header 
-            className="pt-20 px-0 mb-24 max-w-[1726px]"
-          >
-            <motion.div
-              initial={{ x: -100, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <h1 
-                className="text-tertiary-container font-display font-black leading-[0.85] tracking-tighter uppercase italic origin-left mb-8 animate-glitch whitespace-nowrap"
-                style={{ 
-                  fontSize: '5rem',
-                  transform: 'scaleY(1.01)'
-                }}
-              >
-                GAMEPLAY_RULES
-              </h1>
-              <div className="flex items-center gap-12 border-t border-white/10 pt-8">
-                <div className="bg-[#1A1A1A] w-fit px-4 py-2 text-[0.65rem] font-bold tracking-[0.2em] text-[#666666] uppercase">
-                  AUTH_VERIFIED // LOADING_GAME_RULES
-                </div>
-                <div className="hidden sm:flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-green-500/70 font-mono text-[10px] tracking-[0.4em] uppercase">SYSTEM_STATE: STABLE</span>
-                </div>
-              </div>
-            </motion.div>
-          </header>
-
-          {/* Section 01: Core Loop - Adjusted based on Debugger Values */}
+        <main 
+          className="w-full pb-24 mx-auto" 
+          style={{ 
+            maxWidth: 'var(--rules-content-max-width, 2500px)',
+            paddingLeft: 'var(--rules-side-padding, 0px)',
+            paddingRight: 'var(--rules-side-padding, 0px)',
+          }}
+        >
+          {/* Hero Section */}
           <section 
-            className="px-0 mb-16 max-w-[1726px]"
+            className="flex flex-col md:flex-row md:items-end gap-8 relative"
+            style={{ 
+              paddingTop: 'var(--rules-hero-top-padding, 6px)',
+              paddingBottom: 'var(--rules-section-gap, 58px)'
+            }}
           >
-            <div className="flex flex-col lg:flex-row gap-4">
-              {sections[0].rules.map((rule, idx) => (
-                <motion.div 
-                  key={rule.label}
-                  initial={{ y: 30, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 + idx * 0.1 }}
-                  className="flex-1 bg-white/[0.03] p-8 border-l border-white/10 relative group hover:bg-white/5 transition-all duration-300 overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 p-2 font-display font-black text-4xl text-white/5 group-hover:text-tertiary-container/10 transition-colors">0{idx + 1}</div>
-                  <h3 className="text-tertiary-container font-display font-bold text-[10px] tracking-[0.3em] uppercase mb-4 relative z-10">{rule.label}</h3>
-                  <p className="text-white/70 font-body text-xs leading-relaxed uppercase tracking-wide relative z-10">{rule.desc}</p>
-                  <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-tertiary-container group-hover:w-full transition-all duration-500"></div>
-                </motion.div>
-              ))}
+            <div className="flex flex-col gap-2 flex-shrink-0">
+              <Title 
+                as="h1" 
+                className="text-tertiary-container leading-[0.85] text-[4rem] md:text-[6rem] tracking-tighter animate-glitch mt-[-8px]"
+              >
+                GAMEPLAY<br />RULES
+              </Title>
+            </div>
+            <div className="absolute top-0 right-0 p-4 border-l border-white/10 max-w-lg text-right">
+              <p className="text-[0.65rem] font-bold tracking-[0.2em] text-[#666666] uppercase leading-relaxed opacity-60">
+                Jeparty is a host-controlled trivia game. The host manages scores and reveals questions from their device while players compete to answer.
+              </p>
             </div>
           </section>
 
-          {/* Section 02 & 03: Split Grid - Adjusted based on Debugger Values */}
-          <div 
-            className="px-0 pb-24 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-[1726px]"
-          >
-            {/* Scoring Matrix */}
-            <motion.div 
-              initial={{ x: -50, opacity: 0 }}
-              whileInView={{ x: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              style={STYLES.shard}
-              className="bg-tertiary-container text-black p-12 lg:p-16 relative overflow-hidden"
+          {/* Bento Grid Content */}
+          <div className="grid grid-cols-1 md:grid-cols-12" style={{ gap: 'var(--rules-section-gap, 58px)' }}>
+            
+            {/* Section 1: Setup */}
+            <div 
+              className="md:col-span-7 p-10 flex flex-col gap-6 relative overflow-hidden group transition-all"
+              style={{ 
+                backgroundColor: 'var(--rules-surface-color, #111111)',
+                '--hover-translate': 'var(--rules-hover-lift, -4px)'
+              } as any}
             >
-              <div className="absolute top-[-20%] right-[-10%] text-[15rem] font-display font-black text-black/5 italic select-none">DATA</div>
-              <div className="relative z-10">
-                <h2 className="font-display font-black text-6xl italic tracking-tighter uppercase mb-4 leading-none">SCORING_MATRIX</h2>
-                <span className="font-mono text-[11px] font-bold tracking-[0.5em] opacity-40 uppercase block mb-16">POINT_CALIBRATION_LOGIC</span>
-                
-                <div className="space-y-10">
-                  {sections[1].rules.map(rule => (
-                    <div key={rule.label} className="border-b border-black/10 pb-6 group cursor-default">
-                      <span className="font-display font-bold text-[10px] tracking-widest uppercase block mb-2 opacity-60 group-hover:opacity-100 transition-opacity">{rule.label}</span>
-                      <p className="font-display font-black text-2xl lg:text-3xl leading-tight uppercase italic transform group-hover:translate-x-2 transition-transform">{rule.desc}</p>
-                    </div>
-                  ))}
+              <TechBracket position="tl" className="top-2 left-2" />
+              <TechBracket position="tr" className="top-2 right-2" />
+              <div className="absolute top-4 left-10 font-mono text-[8px] text-tertiary-container/30 tracking-[0.4em] animate-pulse">ARENA_INIT_01</div>
+              <h2 className="font-display font-bold text-4xl uppercase tracking-tighter" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>01 // SETUP</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="font-bold uppercase text-xs tracking-widest mb-2" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>CAPACITY</h3>
+                  <p className="text-2xl font-body font-bold">2-8 PLAYERS</p>
+                  <p className="text-white/60 mt-2 leading-relaxed">Optimal engagement achieved with 4+ players. Supports team-based tactical play.</p>
+                </div>
+                <div>
+                  <h3 className="font-bold uppercase text-xs tracking-widest mb-2" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>GAME BOARD</h3>
+                  <p className="text-2xl font-body font-bold">5 CATEGORIES</p>
+                  <p className="text-white/60 mt-2 leading-relaxed">The board has 5 categories, each with questions ranging from 100 to 700 points.</p>
                 </div>
               </div>
-            </motion.div>
+              <div className="mt-4 p-6 border-t-2 bg-white/5" style={{ borderColor: 'var(--rules-accent-color, #fe0000)' }}>
+                <p className="font-body text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--primary, #FFFFFF)' }}>Special Categories</p>
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black px-2 py-0.5" style={{ backgroundColor: 'var(--rules-accent-color, #fe0000)', color: 'white' }}>-V</span>
+                    <span className="text-xs uppercase">IMAGE QUESTION</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black px-2 py-0.5" style={{ backgroundColor: 'var(--rules-accent-color, #fe0000)', color: 'white' }}>-A</span>
+                    <span className="text-xs uppercase">AUDIO QUESTION</span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 overflow-hidden border border-white/5 bg-white/5 rounded">
+                <table className="w-full text-[10px] uppercase tracking-wider text-white/40">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="p-2 text-left">GAME SETTING</th>
+                      <th className="p-2 text-left">OPTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-white/5">
+                      <td className="p-2">DIFFICULTY</td>
+                      <td className="p-2">EASY / MEDIUM / HARD</td>
+                    </tr>
+                    <tr className="border-t border-white/5">
+                      <td className="p-2">TIME LIMIT</td>
+                      <td className="p-2">30S / 60S / UNLIMITED</td>
+                    </tr>
+                    <tr className="border-t border-white/5">
+                      <td className="p-2">SCORING MODE</td>
+                      <td className="p-2">STANDARD / ADVANCED</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-            {/* Moderator Terminal */}
-            <motion.div 
-              initial={{ x: 50, opacity: 0 }}
-              whileInView={{ x: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              className="border border-white/10 bg-white/[0.01] p-12 lg:p-16 flex flex-col justify-between"
+            {/* Section 2: The Board */}
+            <div 
+              className="md:col-span-5 p-10 flex flex-col justify-between transition-all"
+              style={{ backgroundColor: 'var(--rules-accent-color, #fe0000)', color: 'white' }}
             >
+              <TechBracket position="bl" className="bottom-2 left-2" />
+              <TechBracket position="br" className="bottom-2 right-2" />
               <div>
-                <h2 className="text-white font-display font-black text-6xl italic tracking-tighter uppercase mb-4 leading-none">MOD_TERMINAL</h2>
-                <span className="text-white/20 font-mono text-[11px] tracking-[0.5em] uppercase block mb-16">SYSTEM_OVERRIDES_PORTAL</span>
+                <h2 className="font-display font-black text-4xl uppercase tracking-tighter mb-4">02 // THE BOARD</h2>
+                <p className="font-medium leading-snug">A 5xN grid of questions. Once a category and value are chosen, the question is shown and the game follows passing rules if needed.</p>
+              </div>
+              <div className="grid grid-cols-5 gap-1 mt-8 h-32 opacity-80">
+                {[...Array(10)].map((_, i) => (
+                  <div key={i} className="bg-black/20" style={{ opacity: 0.1 + (i * 0.1) }}></div>
+                ))}
+              </div>
+            </div>
 
-                <div className="space-y-12">
-                  {sections[2].rules.map(rule => (
-                    <div key={rule.label} className="group cursor-crosshair">
-                      <div className="flex items-center gap-6 mb-3">
-                        <div className="w-3 h-3 bg-white/10 group-hover:bg-tertiary-container group-hover:shadow-[0_0_10px_#EB0000] transition-all"></div>
-                        <span className="text-white/40 group-hover:text-white font-display font-bold text-[10px] tracking-widest uppercase transition-colors">{rule.label}</span>
-                      </div>
-                      <p className="text-white/50 font-body text-[13px] leading-relaxed max-w-sm pl-9 border-l border-white/5 group-hover:border-tertiary-container/40 transition-all uppercase tracking-wider">{rule.desc}</p>
-                    </div>
-                  ))}
+            {/* Section 3: Standard Scoring */}
+            <div 
+              className="md:col-span-12 p-10 flex flex-col md:flex-row gap-12 items-center"
+              style={{ backgroundColor: 'var(--rules-surface-color, #111111)' }}
+            >
+              <div className="md:w-1/3 relative">
+                <TechBracket position="bl" className="bottom-0 left-0" />
+                <h2 className="font-display font-bold text-5xl uppercase tracking-tighter leading-none" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>03 // SCORING RULES</h2>
+              </div>
+              <div className="md:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex gap-4 items-start">
+                  <span className="material-symbols-outlined text-4xl" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>add_circle</span>
+                  <div>
+                    <p className="font-body font-bold text-xl uppercase">CORRECT ANSWER</p>
+                    <p className="text-white/60">+100% of the question value. The current player keeps control of the board.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <span className="material-symbols-outlined text-error text-4xl">do_not_disturb_on</span>
+                  <div>
+                    <p className="font-body font-bold text-xl uppercase">WRONG ANSWER</p>
+                    <p className="text-white/60">-100% of the question value. The player cannot answer again for this turn.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <span className="material-symbols-outlined text-white text-4xl">forward</span>
+                  <div>
+                    <p className="font-body font-bold text-xl uppercase">SKIP QUESTION</p>
+                    <p className="text-white/60">-50% of the value. The question then passes to the next players.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <span className="material-symbols-outlined text-4xl" style={{ color: 'var(--primary, #FFFFFF)' }}>trending_up</span>
+                  <div>
+                    <p className="font-body font-bold text-xl uppercase">UNDERDOG BOOST</p>
+                    <p className="text-white/60">If you are tied for the lowest score, your correct answers get a 1.5x Multiplier. (Correct answers only).</p>
+                  </div>
+                </div>
+                <div className="flex gap-4 items-start col-span-2 p-4 bg-white/5 rounded border-l-2 border-white/20">
+                  <div>
+                    <p className="font-body font-bold text-xs uppercase tracking-widest opacity-60">ADVANCED MODE SCORING</p>
+                    <p className="text-white/40 text-[11px] mt-1">Wrong Answer: -75% | First Skip: -37.5%</p>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="mt-20 pt-10 border-t border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <div className="flex flex-col gap-1">
-                  <span className="text-white/20 font-mono text-[9px] tracking-[0.5em]">AUTH_KEY_SEQUENCE:</span>
-                  <span className="text-white/60 font-mono text-[10px] tracking-[0.2em]">0XEB_RIOT_PROT_V4_882</span>
-                </div>
-                <div className="px-6 py-2 bg-tertiary-container/10 border border-tertiary-container/20 text-tertiary-container text-[10px] font-black tracking-[0.4em] uppercase">
-                  SECURITY_STATE: SECURED
+            {/* Section 4: Skip Chain */}
+            <div 
+              className="md:col-span-6 p-10 relative overflow-hidden group"
+              style={{ backgroundColor: 'var(--rules-surface-color, #111111)' }}
+            >
+              <TechBracket position="tl" className="top-2 left-2" />
+              <div className="flex flex-col gap-6 relative z-10">
+                <h2 className="font-display font-bold text-4xl uppercase tracking-tighter" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>04 // PASSING RULES</h2>
+                <p className="text-white/80 leading-relaxed">If the first player gets it wrong or skips, the question passes to each remaining player in order. After the passing is done, the turn moves to the person after the one who first skipped.</p>
+                <ul className="space-y-4">
+                  <li className="flex items-center gap-3">
+                    <div className="w-2 h-2" style={{ backgroundColor: 'var(--rules-accent-color, #fe0000)' }}></div>
+                    <span className="font-bold uppercase tracking-widest">NEXT PLAYER CORRECT: +50% VALUE</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-error"></div>
+                    <span className="font-bold uppercase tracking-widest">NEXT PLAYER WRONG: -50% VALUE</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className="w-2 h-2 text-white/40 border border-white/20"></div>
+                    <span className="font-bold uppercase tracking-widest">NEXT PLAYER SKIP: NO PENALTY</span>
+                  </li>
+                </ul>
+                <div className="mt-4 p-4 bg-white/5 rounded border border-white/10">
+                   <p className="text-[11px] uppercase tracking-widest opacity-60 font-bold mb-1">FULL CIRCLE RULE</p>
+                   <p className="text-[11px] text-white/40">If a question passes through everyone and returns to the original person, it is revealed with no one scoring.</p>
                 </div>
               </div>
-            </motion.div>
+              <div className="absolute -bottom-10 -right-10 opacity-5">
+                <span className="material-symbols-outlined text-[300px]">hub</span>
+              </div>
+            </div>
+
+            {/* Section 5: Host Controls */}
+            <div 
+              className="md:col-span-6 p-0 overflow-hidden flex flex-col"
+              style={{ backgroundColor: 'var(--rules-surface-color, #111111)' }}
+            >
+              <div className="p-10 bg-white/5">
+                <h2 className="font-display font-bold text-4xl uppercase tracking-tighter" style={{ color: 'var(--primary, #FFFFFF)' }}>05 // HOST CONTROLS</h2>
+              </div>
+              <div className="flex-grow p-6">
+                <table className="w-full text-left font-body uppercase tracking-wider">
+                  <thead className="border-b border-white/10" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>
+                    <tr>
+                      <th className="py-4 font-black">COMMAND</th>
+                      <th className="py-4 font-black">ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-white/60 divide-y divide-white/5">
+                    <tr>
+                      <td className="py-3 font-bold" style={{ color: 'var(--primary, #FFFFFF)' }}>CORRECT</td>
+                      <td className="py-3 italic">Give points to the active player</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-bold" style={{ color: 'var(--primary, #FFFFFF)' }}>WRONG</td>
+                      <td className="py-3 italic">Remove points and lock player</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-bold" style={{ color: 'var(--primary, #FFFFFF)' }}>SKIP</td>
+                      <td className="py-3 italic">Pass question to the next player</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-bold" style={{ color: 'var(--primary, #FFFFFF)' }}>REVEAL</td>
+                      <td className="py-3 italic">Show the answer to everyone</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-bold text-error">TERMINATE</td>
+                      <td className="py-3 italic">End the current game session</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Section 6: Persistence & AI */}
+            <div 
+              className="md:col-span-12 p-10 flex flex-col md:flex-row gap-12"
+              style={{ backgroundColor: 'var(--rules-surface-color, #111111)' }}
+            >
+              <div className="md:w-1/2">
+                <h2 className="font-display font-bold text-4xl uppercase tracking-tighter mb-4" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>06 // AUTO-SAVE & AI</h2>
+                <div className="space-y-4">
+                  <div>
+                    <p className="font-bold uppercase text-xs tracking-widest opacity-60">SESSION PERSISTENCE</p>
+                    <p className="text-white/40 mt-1">Games are automatically saved to your browser. If you refresh, the board and scores are restored instantly.</p>
+                  </div>
+                  <div>
+                    <p className="font-bold uppercase text-xs tracking-widest opacity-60">AI TOPIC MEMORY</p>
+                    <p className="text-white/40 mt-1">The system remembers the last 5 games and avoids repeating questions from those topics.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="md:w-1/2 border-l border-white/10 pl-12 flex items-center">
+                <div className="p-6 bg-white/5 rounded-lg w-full flex items-center gap-6">
+                  <span className="material-symbols-outlined text-5xl opacity-20">cloud_done</span>
+                  <p className="text-[11px] leading-relaxed italic opacity-40">SYSTEM STATUS: ALL OPERATIONS PERSISTED TO LOCAL STORAGE REPOSITORY. AI NEURAL LINK ESTABLISHED.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 7: Quick Summary */}
+            <div 
+              className="md:col-span-12 p-12 flex flex-col items-center gap-10 border-t-4" 
+              style={{ 
+                backgroundColor: '#111111',
+                borderColor: 'var(--rules-accent-color, #fe0000)',
+                color: 'white'
+              }}
+            >
+              <h2 className="font-display font-bold text-3xl uppercase tracking-tighter" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>QUICK SUMMARY</h2>
+              <div className="flex flex-wrap justify-center gap-12 md:gap-24">
+                <div className="flex flex-col items-center">
+                  <span className="font-body font-black text-5xl tracking-tighter">+100%</span>
+                  <span className="font-body font-bold uppercase text-[10px] tracking-[0.3em] opacity-40 mt-1">CORRECT</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-body font-black text-5xl tracking-tighter" style={{ color: 'var(--rules-accent-color, #fe0000)' }}>-100%</span>
+                  <span className="font-body font-bold uppercase text-[10px] tracking-[0.3em] opacity-40 mt-1">WRONG</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-body font-black text-5xl tracking-tighter">-50%</span>
+                  <span className="font-body font-bold uppercase text-[10px] tracking-[0.3em] opacity-40 mt-1">PASS</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-body font-black text-5xl tracking-tighter">+50%</span>
+                  <span className="font-body font-bold uppercase text-[10px] tracking-[0.3em] opacity-40 mt-1">CHAIN_WIN</span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Footer CTA */}
-          <footer className="mt-12 mb-32 flex flex-col items-center">
-            <div className="w-px h-24 bg-gradient-to-b from-tertiary-container to-transparent mb-12"></div>
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative group bg-white px-20 py-8 transform -skew-x-12"
-            >
-              <div className="absolute inset-0 bg-tertiary-container translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[0.16, 1, 0.3, 1]"></div>
-              <span className="relative z-10 text-black font-display font-black text-4xl lg:text-5xl italic tracking-tighter uppercase whitespace-nowrap">
-                INITIALIZE_ARENA
-              </span>
-            </motion.button>
-            <div className="mt-12 text-white/10 font-display font-black text-[10px] tracking-[1.5em] uppercase">
-              TERMINUS_OS // [2026_RIOT_EDITION]
-            </div>
-          </footer>
+
+
         </main>
+
+
       </div>
     </PageTransition>
   );
