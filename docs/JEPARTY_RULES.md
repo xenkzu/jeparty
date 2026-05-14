@@ -1,4 +1,4 @@
-# JEPARTY — Official Rules & Game Guide
+JEPARTY Official Rules (Desktop)JEPARTY Official Rules (Desktop)# JEPARTY — Official Rules & Game Guide
 
 ---
 
