@@ -13,9 +13,42 @@ const POINT_VALUES: Record<number, number[]> = {
 };
 
 const DIFFICULTY_INSTRUCTION: Record<string, string> = {
-  easy: 'Generate casual, well-known trivia. Questions should be common knowledge that most people at a party would know. Pop culture, basic facts, famous names.',
-  medium: 'Generate moderately difficult trivia. Questions should require genuine knowledge of the topic. More specific facts, less obvious answers, niche but not obscure.',
-  hard: 'Generate expert-level trivia. Questions should be very specific and niche. Only true enthusiasts or experts would know these answers. Avoid obvious facts, focus on deep knowledge of the category.',
+  easy: `EASY MODE — follow these rules strictly:
+- Every question must be answerable by someone who has never studied the topic
+- Only use the most globally famous examples (top 3 most recognizable in any category)
+- Question style: direct and obvious — "What color is the sky?", "Who created Mickey Mouse?"
+- Answers must be household names or facts taught in primary school
+- FORBIDDEN on easy: dates, numbers, specific locations, technical terms, niche references
+- Example easy questions:
+  Science: "What planet is closest to the Sun?" → "Mercury"
+  History: "Who was the first US President?" → "George Washington"
+  Movies: "What studio made The Lion King?" → "Disney"
+  Maths: "What is 12 × 12?" → "144"`,
+
+  medium: `MEDIUM MODE — follow these rules strictly:
+- Questions require genuine topic knowledge — a casual fan would know, a non-fan would not
+- Use specific facts, years, character names, sequels, records, and real events
+- Avoid the single most obvious answer — pick the second or third most famous example
+- Question style: specific but fair — "Which country has won the most FIFA World Cups?"
+- FORBIDDEN on medium: trivially obvious facts, questions a child could answer without knowing the topic
+- Example medium questions:
+  Science: "What element has the atomic symbol Fe?" → "Iron"
+  History: "In what year did the Berlin Wall fall?" → "1989"
+  Movies: "Who directed Pulp Fiction?" → "Quentin Tarantino"
+  Maths: "What is the value of pi to 2 decimal places?" → "3.14"`,
+
+  hard: `HARD MODE — follow these rules strictly:
+- Questions should stump most people — only enthusiasts or experts will know the answer
+- Use obscure facts, secondary characters, specific dates, record holders, technical details
+- Never use the most famous example — go for lesser-known but verifiable facts
+- Question style: hyper-specific — "Who scored the winning goal in the 1966 World Cup final?"
+- FORBIDDEN on hard: anything answerable by casual knowledge, famous names, obvious facts
+- The 100pt question on hard should still be harder than the 500pt question on easy
+- Example hard questions:
+  Science: "What is the half-life of Carbon-14 in years?" → "5,730 years"
+  History: "Which treaty ended the War of 1812?" → "Treaty of Ghent"
+  Movies: "Who composed the score for 2001: A Space Odyssey?" → "György Ligeti"
+  Maths: "What is Euler's identity?" → "e^iπ + 1 = 0"`,
 };
 
 function buildPrompt(categories: string[], settings: GameSettings, exclusions: Record<string, string[]> = {}): string {
@@ -130,15 +163,19 @@ ${exclusionBlock}
        5. For AUDIO questions specifically: the question field must be a bare prompt with NO colons followed by content, NO artist names, NO song titles, NO album names, NO year hints, NO genre hints. Literally just "Guess the song." — nothing else.
 
       DIFFICULTY SCALING RULES — strictly follow for every category:
+       Global difficulty is set to: ${difficulty.toUpperCase()}
+       Within that difficulty band, questions MUST still scale from easiest to hardest:
        ${pointValues.map((v, i) => {
-    const labels = ['Extremely easy — anyone would know this', 'Easy — most people would know', 'Medium — requires some knowledge', 'Hard — requires strong knowledge', 'Expert level — enthusiasts/experts only', 'Very expert — deep niche knowledge', 'Master level — almost nobody knows this'];
-    return `${v} points → ${labels[Math.min(i, labels.length - 1)]}`;
-  }).join('\n       ')}
+         const labels = ['Extremely easy — anyone would know this', 'Easy — most people would know', 'Medium — requires some knowledge', 'Hard — requires strong knowledge', 'Expert level — enthusiasts/experts only', 'Very expert — deep niche knowledge', 'Master level — almost nobody knows this'];
+         return `${v} points → ${labels[Math.min(i, labels.length - 1)]} (within ${difficulty} band)`;
+       }).join('\n       ')}
 
-       The difficulty jump between each tier must be noticeable.
-       ORDERING IS MANDATORY: The JSON array for each category MUST be ordered index 0 = easiest, index ${questionsPerCategory - 1} = hardest.
-       DO NOT shuffle. DO NOT put a hard question at index 0. The array order in your JSON output IS the point value order.
-       Verify before outputting: question at index 0 must be answerable by anyone, question at index ${questionsPerCategory - 1} must stump most people.`;
+       This means on HARD mode: even the 100pt question should be hard by normal standards.
+       On EASY mode: even the 500pt question should be answerable by most people at a party.
+       The difficulty band shifts the entire scale — it does not just affect the hardest question.
+
+       ORDERING IS MANDATORY: index 0 = easiest within band, index ${questionsPerCategory - 1} = hardest within band.
+       DO NOT shuffle. Verify before outputting.`;
 }
 
 /**
